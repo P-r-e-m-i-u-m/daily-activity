@@ -3,19 +3,27 @@ name: Daily Auto Commit
 on:
   schedule:
     - cron: '0 9 * * *'
-    workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
   auto-commit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
-      - name: Make a commit
+
+      - name: Daily meaningful update
         run: |
           git config user.email "you@example.com"
           git config user.name "Your Name"
-          echo "$(date)" >> activity.log
+          DAY=$(date +%A)
+          DATE=$(date +%Y-%m-%d)
+          NUM=$((RANDOM % 100 + 1))
+          cat >> README.md << 'EOF'
+          ## Daily Log
+          - Fixed minor bug
+          - Code cleanup
+          - Improved logic
+          EOF
           git add .
-          git commit -m "Daily update: $(date)"
+          git commit -m "fix: code cleanup and improvements"
           git push
