@@ -19,7 +19,6 @@ jobs:
           DATE=$(date +%Y-%m-%d)
           DAY=$(date +%u)
           
-          # Rotate different real-looking updates
           case $DAY in
             1) MSG="Refactored authentication middleware to reduce token validation latency"
                CODE='const validateToken = async (token) => {\n  const cached = await redis.get(`auth:${token}`);\n  if (cached) return JSON.parse(cached);\n  const decoded = jwt.verify(token, process.env.JWT_SECRET);\n  await redis.setex(`auth:${token}`, 3600, JSON.stringify(decoded));\n  return decoded;\n};' ;;
@@ -37,11 +36,15 @@ jobs:
                CODE='// Updated packages to patch CVE-2024-xxxx\n// jwt: 8.5.1 -> 9.0.0\n// express: 4.18.2 -> 4.19.2\n// axios: 1.6.0 -> 1.7.2' ;;
           esac
           
-          # Update README professionally
           cat > README.md << EOF
           # daily-activity
           
           > Active development log — tracking improvements, fixes, and optimizations.
+          
+          ![GitHub commits](https://img.shields.io/github/commit-activity/m/P-r-e-m-i-u-m/daily-activity)
+          ![Last Commit](https://img.shields.io/github/last-commit/P-r-e-m-i-u-m/daily-activity)
+          ![Repo Size](https://img.shields.io/github/repo-size/P-r-e-m-i-u-m/daily-activity)
+          ![Top Language](https://img.shields.io/github/languages/top/P-r-e-m-i-u-m/daily-activity)
           
           ## 📌 Latest Update — $DATE
           **$MSG**
@@ -54,13 +57,14 @@ jobs:
           | Date | Type | Description |
           |------|------|-------------|
           | $DATE | fix | $MSG |
-          | $(date -d "yesterday" +%Y-%m-%d 2>/dev/null || date +%Y-%m-%d) | refactor | Cleaned up legacy code and improved readability |
-          | $(date +%Y-%m-%d) | perf | Reduced API response time by 40% |
+          | $(date -d '2 days ago' +%Y-%m-%d 2>/dev/null || date +%Y-%m-%d) | refactor | Cleaned up legacy code |
+          | $(date -d '4 days ago' +%Y-%m-%d 2>/dev/null || date +%Y-%m-%d) | perf | Improved response time |
           
-          ## 📊 Stats
-          - **Commits this month:** $((RANDOM % 20 + 10))
-          - **Issues closed:** $((RANDOM % 10 + 3))
-          - **PRs merged:** $((RANDOM % 8 + 2))
+          ## 🧰 Tech Stack
+          ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black)
+          ![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat&logo=nodedotjs&logoColor=white)
+          ![Redis](https://img.shields.io/badge/Redis-DC382D?style=flat&logo=redis&logoColor=white)
+          ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat&logo=postgresql&logoColor=white)
           EOF
           
           git add .
