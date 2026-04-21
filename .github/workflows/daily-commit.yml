@@ -24,147 +24,134 @@ jobs:
           case $DAY in
             1)
               mkdir -p src/middleware
-              cat > src/middleware/auth.js << 'EOF'
-const jwt = require('jsonwebtoken');
-const redis = require('../config/redis');
-
-const validateToken = async (token) => {
-  const cached = await redis.get(`auth:${token}`);
-  if (cached) return JSON.parse(cached);
-  const decoded = jwt.verify(token, process.env.JWT_SECRET);
-  await redis.setex(`auth:${token}`, 3600, JSON.stringify(decoded));
-  return decoded;
-};
-
-module.exports = { validateToken };
-EOF
+              printf '%s\n' \
+                'const jwt = require("jsonwebtoken");' \
+                'const redis = require("../config/redis");' \
+                '' \
+                'const validateToken = async (token) => {' \
+                '  const cached = await redis.get("auth:" + token);' \
+                '  if (cached) return JSON.parse(cached);' \
+                '  const decoded = jwt.verify(token, process.env.JWT_SECRET);' \
+                '  await redis.setex("auth:" + token, 3600, JSON.stringify(decoded));' \
+                '  return decoded;' \
+                '};' \
+                '' \
+                'module.exports = { validateToken };' > src/middleware/auth.js
               MSG="fix: improve JWT validation with Redis caching" ;;
 
             2)
               mkdir -p src/utils
-              cat > src/utils/fetchWithRetry.py << 'EOF'
-import asyncio
-import aiohttp
-
-async def fetch_with_retry(url: str, retries: int = 3) -> dict:
-    for attempt in range(retries):
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    return await response.json()
-        except Exception as e:
-            if attempt == retries - 1:
-                raise e
-            await asyncio.sleep(2 ** attempt)
-EOF
+              printf '%s\n' \
+                'import asyncio' \
+                'import aiohttp' \
+                '' \
+                'async def fetch_with_retry(url: str, retries: int = 3) -> dict:' \
+                '    for attempt in range(retries):' \
+                '        try:' \
+                '            async with aiohttp.ClientSession() as session:' \
+                '                async with session.get(url) as response:' \
+                '                    return await response.json()' \
+                '        except Exception as e:' \
+                '            if attempt == retries - 1:' \
+                '                raise e' \
+                '            await asyncio.sleep(2 ** attempt)' > src/utils/fetchWithRetry.py
               MSG="feat: add async retry logic for external API calls" ;;
 
             3)
               mkdir -p src/db/migrations
-              cat > src/db/migrations/add_indexes.sql << 'EOF'
--- Performance indexes for high-traffic tables
-CREATE INDEX IF NOT EXISTS idx_users_email_status
-ON users(email, status)
-WHERE deleted_at IS NULL;
-
-CREATE INDEX IF NOT EXISTS idx_sessions_user_created
-ON sessions(user_id, created_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_logs_created_level
-ON logs(created_at DESC, level)
-WHERE level IN ('error', 'warn');
-EOF
+              printf '%s\n' \
+                '-- Performance indexes for high-traffic tables' \
+                'CREATE INDEX IF NOT EXISTS idx_users_email_status' \
+                'ON users(email, status)' \
+                'WHERE deleted_at IS NULL;' \
+                '' \
+                'CREATE INDEX IF NOT EXISTS idx_sessions_user_created' \
+                'ON sessions(user_id, created_at DESC);' \
+                '' \
+                'CREATE INDEX IF NOT EXISTS idx_logs_created_level' \
+                'ON logs(created_at DESC, level)' \
+                'WHERE level IN ('"'"'error'"'"', '"'"'warn'"'"');' > src/db/migrations/add_indexes.sql
               MSG="fix: add composite indexes to improve query performance" ;;
 
             4)
               mkdir -p src/services
-              cat > src/services/cache.js << 'EOF'
-const redis = require('../config/redis');
-
-const withCache = (fn, ttl = 300) => async (...args) => {
-  const key = `cache:${fn.name}:${JSON.stringify(args)}`;
-  const hit = await redis.get(key);
-  if (hit) return JSON.parse(hit);
-  const result = await fn(...args);
-  await redis.setex(key, ttl, JSON.stringify(result));
-  return result;
-};
-
-module.exports = { withCache };
-EOF
+              printf '%s\n' \
+                'const redis = require("../config/redis");' \
+                '' \
+                'const withCache = (fn, ttl = 300) => async (...args) => {' \
+                '  const key = "cache:" + fn.name + ":" + JSON.stringify(args);' \
+                '  const hit = await redis.get(key);' \
+                '  if (hit) return JSON.parse(hit);' \
+                '  const result = await fn(...args);' \
+                '  await redis.setex(key, ttl, JSON.stringify(result));' \
+                '  return result;' \
+                '};' \
+                '' \
+                'module.exports = { withCache };' > src/services/cache.js
               MSG="feat: add Redis caching layer for hot data" ;;
 
             5)
               mkdir -p src/utils
-              cat > src/utils/paginate.py << 'EOF'
-from typing import Optional, TypeVar, Generic
-from dataclasses import dataclass
-
-T = TypeVar('T')
-
-@dataclass
-class PaginationResult(Generic[T]):
-    items: list[T]
-    next_cursor: Optional[str]
-    has_more: bool
-
-async def paginate(model, cursor: Optional[str] = None, limit: int = 20) -> PaginationResult:
-    query = model.select().limit(limit + 1)
-    if cursor:
-        query = query.where(model.id > cursor)
-    items = await query.execute()
-    has_more = len(items) > limit
-    return PaginationResult(
-        items=items[:limit],
-        next_cursor=str(items[limit - 1].id) if has_more else None,
-        has_more=has_more
-    )
-EOF
+              printf '%s\n' \
+                'from typing import Optional, TypeVar, Generic' \
+                'from dataclasses import dataclass' \
+                '' \
+                'T = TypeVar("T")' \
+                '' \
+                '@dataclass' \
+                'class PaginationResult:' \
+                '    items: list' \
+                '    next_cursor: Optional[str]' \
+                '    has_more: bool' \
+                '' \
+                'async def paginate(model, cursor=None, limit=20):' \
+                '    query = model.select().limit(limit + 1)' \
+                '    if cursor:' \
+                '        query = query.where(model.id > cursor)' \
+                '    items = await query.execute()' \
+                '    has_more = len(items) > limit' \
+                '    return PaginationResult(items=items[:limit], next_cursor=str(items[limit-1].id) if has_more else None, has_more=has_more)' > src/utils/paginate.py
               MSG="feat: implement cursor-based pagination for large datasets" ;;
 
             6)
               mkdir -p src/config
-              cat > src/config/cors.js << 'EOF'
-const corsOptions = {
-  origin: (origin, callback) => {
-    const allowed = process.env.ALLOWED_ORIGINS?.split(',') || [];
-    if (!origin || allowed.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
-  credentials: true,
-  maxAge: 86400
-};
-
-module.exports = corsOptions;
-EOF
+              printf '%s\n' \
+                'const corsOptions = {' \
+                '  origin: (origin, callback) => {' \
+                '    const allowed = process.env.ALLOWED_ORIGINS?.split(",") || [];' \
+                '    if (!origin || allowed.includes(origin)) {' \
+                '      callback(null, true);' \
+                '    } else {' \
+                '      callback(new Error("Not allowed by CORS"));' \
+                '    }' \
+                '  },' \
+                '  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],' \
+                '  allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID"],' \
+                '  credentials: true,' \
+                '  maxAge: 86400' \
+                '};' \
+                '' \
+                'module.exports = corsOptions;' > src/config/cors.js
               MSG="fix: tighten CORS policy for production security" ;;
 
             7)
               mkdir -p src/services
-              cat > src/services/logger.ts << 'EOF'
-interface LogMeta {
-  [key: string]: unknown;
-}
-
-const logger = {
-  info: (msg: string, meta: LogMeta = {}): void => {
-    console.log(JSON.stringify({ level: 'info', msg, ...meta, ts: Date.now() }));
-  },
-  error: (msg: string, err?: Error): void => {
-    console.error(JSON.stringify({ level: 'error', msg, stack: err?.stack, ts: Date.now() }));
-  },
-  warn: (msg: string, meta: LogMeta = {}): void => {
-    console.warn(JSON.stringify({ level: 'warn', msg, ...meta, ts: Date.now() }));
-  }
-};
-
-export default logger;
-EOF
+              printf '%s\n' \
+                'interface LogMeta { [key: string]: unknown; }' \
+                '' \
+                'const logger = {' \
+                '  info: (msg: string, meta: LogMeta = {}): void => {' \
+                '    console.log(JSON.stringify({ level: "info", msg, ...meta, ts: Date.now() }));' \
+                '  },' \
+                '  error: (msg: string, err?: Error): void => {' \
+                '    console.error(JSON.stringify({ level: "error", msg, stack: err?.stack, ts: Date.now() }));' \
+                '  },' \
+                '  warn: (msg: string, meta: LogMeta = {}): void => {' \
+                '    console.warn(JSON.stringify({ level: "warn", msg, ...meta, ts: Date.now() }));' \
+                '  }' \
+                '};' \
+                '' \
+                'export default logger;' > src/services/logger.ts
               MSG="feat: implement structured TypeScript logger with log levels" ;;
           esac
 
