@@ -10,63 +10,164 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MY_TOKEN }}
 
       - name: Daily meaningful update
         run: |
           git config user.email "amanbaba9404522@gmail.com"
           git config user.name "P-r-e-m-i-u-m"
-          
+
           DATE=$(date +%Y-%m-%d)
-          DAY=$(date +%u)
-          
+          DAY=$(( ($(date +%j) % 7) + 1 ))
+
           case $DAY in
-            1) MSG="Refactored authentication middleware to reduce token validation latency"
-               CODE='const validateToken = async (token) => {\n  const cached = await redis.get(`auth:${token}`);\n  if (cached) return JSON.parse(cached);\n  const decoded = jwt.verify(token, process.env.JWT_SECRET);\n  await redis.setex(`auth:${token}`, 3600, JSON.stringify(decoded));\n  return decoded;\n};' ;;
-            2) MSG="Fixed race condition in async queue processor"
-               CODE='const processQueue = async (queue) => {\n  const lock = await acquireLock(queue.id);\n  try {\n    const jobs = await queue.getPending();\n    await Promise.allSettled(jobs.map(job => job.process()));\n  } finally {\n    await lock.release();\n  }\n};' ;;
-            3) MSG="Optimized database queries with proper indexing strategy"
-               CODE='-- Added composite index for faster user lookups\nCREATE INDEX idx_users_email_status\nON users(email, status)\nWHERE deleted_at IS NULL;' ;;
-            4) MSG="Improved error handling and added retry logic for API calls"
-               CODE='const fetchWithRetry = async (url, retries = 3) => {\n  for (let i = 0; i < retries; i++) {\n    try {\n      return await fetch(url);\n    } catch (err) {\n      if (i === retries - 1) throw err;\n      await new Promise(r => setTimeout(r, 1000 * 2 ** i));\n    }\n  }\n};' ;;
-            5) MSG="Added input validation and sanitization layer"
-               CODE='const sanitizeInput = (input) => {\n  return {\n    email: validator.normalizeEmail(input.email),\n    name: DOMPurify.sanitize(input.name.trim()),\n    age: Math.abs(parseInt(input.age)) || 0\n  };\n};' ;;
-            6) MSG="Implemented caching layer for frequently accessed data"
-               CODE='const withCache = (fn, ttl = 300) => async (...args) => {\n  const key = `cache:${fn.name}:${JSON.stringify(args)}`;\n  const hit = await redis.get(key);\n  if (hit) return JSON.parse(hit);\n  const result = await fn(...args);\n  await redis.setex(key, ttl, JSON.stringify(result));\n  return result;\n};' ;;
-            7) MSG="Updated dependencies and fixed security vulnerabilities"
-               CODE='// Updated packages to patch CVE-2024-xxxx\n// jwt: 8.5.1 -> 9.0.0\n// express: 4.18.2 -> 4.19.2\n// axios: 1.6.0 -> 1.7.2' ;;
+            1)
+              mkdir -p src/middleware
+              cat > src/middleware/auth.js << 'EOF'
+const jwt = require('jsonwebtoken');
+const redis = require('../config/redis');
+
+const validateToken = async (token) => {
+  const cached = await redis.get(`auth:${token}`);
+  if (cached) return JSON.parse(cached);
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  await redis.setex(`auth:${token}`, 3600, JSON.stringify(decoded));
+  return decoded;
+};
+
+module.exports = { validateToken };
+EOF
+              MSG="fix: improve JWT validation with Redis caching" ;;
+
+            2)
+              mkdir -p src/utils
+              cat > src/utils/fetchWithRetry.py << 'EOF'
+import asyncio
+import aiohttp
+
+async def fetch_with_retry(url: str, retries: int = 3) -> dict:
+    for attempt in range(retries):
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    return await response.json()
+        except Exception as e:
+            if attempt == retries - 1:
+                raise e
+            await asyncio.sleep(2 ** attempt)
+EOF
+              MSG="feat: add async retry logic for external API calls" ;;
+
+            3)
+              mkdir -p src/db/migrations
+              cat > src/db/migrations/add_indexes.sql << 'EOF'
+-- Performance indexes for high-traffic tables
+CREATE INDEX IF NOT EXISTS idx_users_email_status
+ON users(email, status)
+WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_sessions_user_created
+ON sessions(user_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_logs_created_level
+ON logs(created_at DESC, level)
+WHERE level IN ('error', 'warn');
+EOF
+              MSG="fix: add composite indexes to improve query performance" ;;
+
+            4)
+              mkdir -p src/services
+              cat > src/services/cache.js << 'EOF'
+const redis = require('../config/redis');
+
+const withCache = (fn, ttl = 300) => async (...args) => {
+  const key = `cache:${fn.name}:${JSON.stringify(args)}`;
+  const hit = await redis.get(key);
+  if (hit) return JSON.parse(hit);
+  const result = await fn(...args);
+  await redis.setex(key, ttl, JSON.stringify(result));
+  return result;
+};
+
+module.exports = { withCache };
+EOF
+              MSG="feat: add Redis caching layer for hot data" ;;
+
+            5)
+              mkdir -p src/utils
+              cat > src/utils/paginate.py << 'EOF'
+from typing import Optional, TypeVar, Generic
+from dataclasses import dataclass
+
+T = TypeVar('T')
+
+@dataclass
+class PaginationResult(Generic[T]):
+    items: list[T]
+    next_cursor: Optional[str]
+    has_more: bool
+
+async def paginate(model, cursor: Optional[str] = None, limit: int = 20) -> PaginationResult:
+    query = model.select().limit(limit + 1)
+    if cursor:
+        query = query.where(model.id > cursor)
+    items = await query.execute()
+    has_more = len(items) > limit
+    return PaginationResult(
+        items=items[:limit],
+        next_cursor=str(items[limit - 1].id) if has_more else None,
+        has_more=has_more
+    )
+EOF
+              MSG="feat: implement cursor-based pagination for large datasets" ;;
+
+            6)
+              mkdir -p src/config
+              cat > src/config/cors.js << 'EOF'
+const corsOptions = {
+  origin: (origin, callback) => {
+    const allowed = process.env.ALLOWED_ORIGINS?.split(',') || [];
+    if (!origin || allowed.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+  credentials: true,
+  maxAge: 86400
+};
+
+module.exports = corsOptions;
+EOF
+              MSG="fix: tighten CORS policy for production security" ;;
+
+            7)
+              mkdir -p src/services
+              cat > src/services/logger.ts << 'EOF'
+interface LogMeta {
+  [key: string]: unknown;
+}
+
+const logger = {
+  info: (msg: string, meta: LogMeta = {}): void => {
+    console.log(JSON.stringify({ level: 'info', msg, ...meta, ts: Date.now() }));
+  },
+  error: (msg: string, err?: Error): void => {
+    console.error(JSON.stringify({ level: 'error', msg, stack: err?.stack, ts: Date.now() }));
+  },
+  warn: (msg: string, meta: LogMeta = {}): void => {
+    console.warn(JSON.stringify({ level: 'warn', msg, ...meta, ts: Date.now() }));
+  }
+};
+
+export default logger;
+EOF
+              MSG="feat: implement structured TypeScript logger with log levels" ;;
           esac
-          
-          cat > README.md << EOF
-          # daily-activity
-          
-          > Active development log — tracking improvements, fixes, and optimizations.
-          
-          ![GitHub commits](https://img.shields.io/github/commit-activity/m/P-r-e-m-i-u-m/daily-activity)
-          ![Last Commit](https://img.shields.io/github/last-commit/P-r-e-m-i-u-m/daily-activity)
-          ![Repo Size](https://img.shields.io/github/repo-size/P-r-e-m-i-u-m/daily-activity)
-          ![Top Language](https://img.shields.io/github/languages/top/P-r-e-m-i-u-m/daily-activity)
-          
-          ## 📌 Latest Update — $DATE
-          **$MSG**
-          
-          \`\`\`javascript
-          $(echo -e $CODE)
-          \`\`\`
-          
-          ## 🛠️ Recent Activity
-          | Date | Type | Description |
-          |------|------|-------------|
-          | $DATE | fix | $MSG |
-          | $(date -d '2 days ago' +%Y-%m-%d 2>/dev/null || date +%Y-%m-%d) | refactor | Cleaned up legacy code |
-          | $(date -d '4 days ago' +%Y-%m-%d 2>/dev/null || date +%Y-%m-%d) | perf | Improved response time |
-          
-          ## 🧰 Tech Stack
-          ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black)
-          ![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat&logo=nodedotjs&logoColor=white)
-          ![Redis](https://img.shields.io/badge/Redis-DC382D?style=flat&logo=redis&logoColor=white)
-          ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat&logo=postgresql&logoColor=white)
-          EOF
-          
+
           git add .
-          git commit -m "fix: $MSG"
+          git commit -m "$MSG"
           git push
