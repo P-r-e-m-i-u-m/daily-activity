@@ -19,6 +19,7 @@ jobs:
           git config user.name "P-r-e-m-i-u-m"
 
           DATE=$(date +%Y-%m-%d)
+          TS=$(date +%s)
           DAY=$(( ($(date +%j) % 7) + 1 ))
 
           case $DAY in
@@ -36,7 +37,8 @@ jobs:
                 '  return decoded;' \
                 '};' \
                 '' \
-                'module.exports = { validateToken };' > src/middleware/auth.js
+                'module.exports = { validateToken };' \
+                "// updated: $DATE build: $TS" > src/middleware/auth.js
               MSG="fix: improve JWT validation with Redis caching" ;;
 
             2)
@@ -54,7 +56,8 @@ jobs:
                 '        except Exception as e:' \
                 '            if attempt == retries - 1:' \
                 '                raise e' \
-                '            await asyncio.sleep(2 ** attempt)' > src/utils/fetchWithRetry.py
+                '            await asyncio.sleep(2 ** attempt)' \
+                "# updated: $DATE build: $TS" > src/utils/fetchWithRetry.py
               MSG="feat: add async retry logic for external API calls" ;;
 
             3)
@@ -70,7 +73,7 @@ jobs:
                 '' \
                 'CREATE INDEX IF NOT EXISTS idx_logs_created_level' \
                 'ON logs(created_at DESC, level)' \
-                'WHERE level IN ('"'"'error'"'"', '"'"'warn'"'"');' > src/db/migrations/add_indexes.sql
+                "-- updated: $DATE build: $TS" > src/db/migrations/add_indexes.sql
               MSG="fix: add composite indexes to improve query performance" ;;
 
             4)
@@ -87,16 +90,15 @@ jobs:
                 '  return result;' \
                 '};' \
                 '' \
-                'module.exports = { withCache };' > src/services/cache.js
+                'module.exports = { withCache };' \
+                "// updated: $DATE build: $TS" > src/services/cache.js
               MSG="feat: add Redis caching layer for hot data" ;;
 
             5)
               mkdir -p src/utils
               printf '%s\n' \
-                'from typing import Optional, TypeVar, Generic' \
+                'from typing import Optional' \
                 'from dataclasses import dataclass' \
-                '' \
-                'T = TypeVar("T")' \
                 '' \
                 '@dataclass' \
                 'class PaginationResult:' \
@@ -110,7 +112,8 @@ jobs:
                 '        query = query.where(model.id > cursor)' \
                 '    items = await query.execute()' \
                 '    has_more = len(items) > limit' \
-                '    return PaginationResult(items=items[:limit], next_cursor=str(items[limit-1].id) if has_more else None, has_more=has_more)' > src/utils/paginate.py
+                '    return PaginationResult(items=items[:limit], next_cursor=str(items[limit-1].id) if has_more else None, has_more=has_more)' \
+                "# updated: $DATE build: $TS" > src/utils/paginate.py
               MSG="feat: implement cursor-based pagination for large datasets" ;;
 
             6)
@@ -131,7 +134,8 @@ jobs:
                 '  maxAge: 86400' \
                 '};' \
                 '' \
-                'module.exports = corsOptions;' > src/config/cors.js
+                'module.exports = corsOptions;' \
+                "// updated: $DATE build: $TS" > src/config/cors.js
               MSG="fix: tighten CORS policy for production security" ;;
 
             7)
@@ -151,7 +155,8 @@ jobs:
                 '  }' \
                 '};' \
                 '' \
-                'export default logger;' > src/services/logger.ts
+                'export default logger;' \
+                "// updated: $DATE build: $TS" > src/services/logger.ts
               MSG="feat: implement structured TypeScript logger with log levels" ;;
           esac
 
