@@ -7,25 +7,27 @@
 ![Repo Size](https://img.shields.io/github/repo-size/P-r-e-m-i-u-m/daily-activity)
 ![Top Language](https://img.shields.io/github/languages/top/P-r-e-m-i-u-m/daily-activity)
 
-## 📌 Latest Update — 2026-04-20
-**Refactored authentication middleware to reduce token validation latency**
+## 📌 Latest Update — 2026-04-21
+**Fixed race condition in async queue processor**
 
 ```javascript
-const validateToken = async (token) => {
- const cached = await redis.get(`auth:${token}`);
- if (cached) return JSON.parse(cached);
- const decoded = jwt.verify(token, process.env.JWT_SECRET);
- await redis.setex(`auth:${token}`, 3600, JSON.stringify(decoded));
- return decoded;
+const processQueue = async (queue) => {
+ const lock = await acquireLock(queue.id);
+ try {
+ const jobs = await queue.getPending();
+ await Promise.allSettled(jobs.map(job => job.process()));
+ } finally {
+ await lock.release();
+ }
 };
 ```
 
 ## 🛠️ Recent Activity
 | Date | Type | Description |
 |------|------|-------------|
-| 2026-04-20 | fix | Refactored authentication middleware to reduce token validation latency |
-| 2026-04-18 | refactor | Cleaned up legacy code |
-| 2026-04-16 | perf | Improved response time |
+| 2026-04-21 | fix | Fixed race condition in async queue processor |
+| 2026-04-19 | refactor | Cleaned up legacy code |
+| 2026-04-17 | perf | Improved response time |
 
 ## 🧰 Tech Stack
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black)
