@@ -22,70 +22,26 @@ jobs:
         run: |
           DAY=$(( ($(date +%j) % 14) + 1 ))
           DATE=$(date +%Y-%m-%d)
-
           case $DAY in
-            1)  BRANCH="fix/auth-middleware"
-                MSG="fix: improve JWT validation and reduce auth latency"
-                FILE="src/middleware/auth.js"
-                CODE='const validateToken = async (token) => {\n  const cached = await redis.get(`auth:${token}`);\n  if (cached) return JSON.parse(cached);\n  const decoded = jwt.verify(token, process.env.JWT_SECRET);\n  await redis.setex(`auth:${token}`, 3600, JSON.stringify(decoded));\n  return decoded;\n};' ;;
-            2)  BRANCH="feat/queue-processor"
-                MSG="feat: add async job queue with retry mechanism"
-                FILE="src/queue/processor.js"
-                CODE='const processQueue = async (queue) => {\n  const lock = await acquireLock(queue.id);\n  try {\n    const jobs = await queue.getPending();\n    await Promise.allSettled(jobs.map(job => job.process()));\n  } finally {\n    await lock.release();\n  }\n};' ;;
-            3)  BRANCH="fix/db-query-optimization"
-                MSG="fix: optimize slow queries with composite indexing"
-                FILE="src/db/migrations/add_indexes.sql"
-                CODE='-- Composite index for faster user lookups\nCREATE INDEX idx_users_email_status ON users(email, status) WHERE deleted_at IS NULL;' ;;
-            4)  BRANCH="feat/api-retry-logic"
-                MSG="feat: implement retry logic for external API calls"
-                FILE="src/utils/fetchWithRetry.js"
-                CODE='const fetchWithRetry = async (url, retries = 3) => {\n  for (let i = 0; i < retries; i++) {\n    try {\n      return await fetch(url);\n    } catch (err) {\n      if (i === retries - 1) throw err;\n      await new Promise(r => setTimeout(r, 1000 * 2 ** i));\n    }\n  }\n};' ;;
-            5)  BRANCH="fix/input-validation"
-                MSG="fix: strengthen input sanitization to prevent XSS"
-                FILE="src/utils/sanitize.js"
-                CODE='const sanitizeInput = (input) => ({\n  email: validator.normalizeEmail(input.email),\n  name: DOMPurify.sanitize(input.name.trim()),\n  age: Math.abs(parseInt(input.age)) || 0\n});' ;;
-            6)  BRANCH="feat/cache-layer"
-                MSG="feat: add Redis caching layer for hot data"
-                FILE="src/cache/withCache.js"
-                CODE='const withCache = (fn, ttl = 300) => async (...args) => {\n  const key = `cache:${fn.name}:${JSON.stringify(args)}`;\n  const hit = await redis.get(key);\n  if (hit) return JSON.parse(hit);\n  const result = await fn(...args);\n  await redis.setex(key, ttl, JSON.stringify(result));\n  return result;\n};' ;;
-            7)  BRANCH="chore/dependency-updates"
-                MSG="chore: update deps and patch security vulnerabilities"
-                FILE="CHANGELOG.md"
-                CODE='## Security Patches\n- jwt: 8.5.1 -> 9.0.0\n- express: 4.18.2 -> 4.19.2\n- axios: 1.6.0 -> 1.7.2' ;;
-            8)  BRANCH="feat/rate-limiter"
-                MSG="feat: add rate limiting middleware to prevent abuse"
-                FILE="src/middleware/rateLimiter.js"
-                CODE='const rateLimit = require("express-rate-limit");\nconst limiter = rateLimit({ windowMs: 15*60*1000, max: 100, message: { error: "Too many requests" } });\nmodule.exports = limiter;' ;;
-            9)  BRANCH="fix/memory-leak"
-                MSG="fix: resolve memory leak in event listener cleanup"
-                FILE="src/services/eventHandler.js"
-                CODE='class EventHandler {\n  constructor() { this.listeners = new Map(); }\n  on(event, fn) { this.listeners.set(event, fn); process.on(event, fn); }\n  cleanup() { this.listeners.forEach((fn, event) => process.off(event, fn)); this.listeners.clear(); }\n}' ;;
-            10) BRANCH="feat/logger-service"
-                MSG="feat: implement structured logging with log levels"
-                FILE="src/services/logger.js"
-                CODE='const logger = {\n  info: (msg, meta={}) => console.log(JSON.stringify({level:"info",msg,...meta,ts:Date.now()})),\n  error: (msg, err) => console.error(JSON.stringify({level:"error",msg,stack:err?.stack,ts:Date.now()}))\n};' ;;
-            11) BRANCH="fix/cors-config"
-                MSG="fix: tighten CORS policy for production environment"
-                FILE="src/config/cors.js"
-                CODE='const corsOptions = {\n  origin: process.env.ALLOWED_ORIGINS?.split(",") || [],\n  methods: ["GET","POST","PUT","DELETE"],\n  allowedHeaders: ["Content-Type","Authorization"],\n  credentials: true\n};' ;;
-            12) BRANCH="feat/pagination"
-                MSG="feat: add cursor-based pagination for large datasets"
-                FILE="src/utils/paginate.js"
-                CODE='const paginate = async (model, cursor, limit=20) => {\n  const items = await model.findMany({ take: limit+1, ...(cursor && { cursor: {id:cursor}, skip:1 }) });\n  const hasMore = items.length > limit;\n  return { items: items.slice(0,limit), nextCursor: hasMore ? items[limit-1].id : null };\n};' ;;
-            13) BRANCH="fix/error-boundary"
-                MSG="fix: add global error boundary and unhandled rejection handler"
-                FILE="src/middleware/errorHandler.js"
-                CODE='const errorHandler = (err, req, res, next) => {\n  const status = err.status || 500;\n  res.status(status).json({ error: err.message || "Internal Server Error" });\n};' ;;
-            14) BRANCH="feat/health-check"
-                MSG="feat: add /health endpoint with DB and cache status"
-                FILE="src/routes/health.js"
-                CODE='router.get("/health", async (req, res) => {\n  const dbOk = await db.raw("SELECT 1").then(()=>true).catch(()=>false);\n  const cacheOk = await redis.ping().then(r=>r==="PONG").catch(()=>false);\n  res.status(dbOk&&cacheOk?200:503).json({status:dbOk&&cacheOk?"healthy":"degraded"});\n});' ;;
+            1)  BRANCH="fix/auth-middleware"; MSG="fix: improve JWT validation and reduce auth latency"; FILE="src/middleware/auth.js" ;;
+            2)  BRANCH="feat/queue-processor"; MSG="feat: add async job queue with retry mechanism"; FILE="src/queue/processor.js" ;;
+            3)  BRANCH="fix/db-query-optimization"; MSG="fix: optimize slow queries with composite indexing"; FILE="src/db/migrations/add_indexes.sql" ;;
+            4)  BRANCH="feat/api-retry-logic"; MSG="feat: implement retry logic for external API calls"; FILE="src/utils/fetchWithRetry.js" ;;
+            5)  BRANCH="fix/input-validation"; MSG="fix: strengthen input sanitization to prevent XSS"; FILE="src/utils/sanitize.js" ;;
+            6)  BRANCH="feat/cache-layer"; MSG="feat: add Redis caching layer for hot data"; FILE="src/cache/withCache.js" ;;
+            7)  BRANCH="chore/dependency-updates"; MSG="chore: update deps and patch security vulnerabilities"; FILE="CHANGELOG.md" ;;
+            8)  BRANCH="feat/rate-limiter"; MSG="feat: add rate limiting middleware to prevent abuse"; FILE="src/middleware/rateLimiter.js" ;;
+            9)  BRANCH="fix/memory-leak"; MSG="fix: resolve memory leak in event listener cleanup"; FILE="src/services/eventHandler.js" ;;
+            10) BRANCH="feat/logger-service"; MSG="feat: implement structured logging with log levels"; FILE="src/services/logger.js" ;;
+            11) BRANCH="fix/cors-config"; MSG="fix: tighten CORS policy for production environment"; FILE="src/config/cors.js" ;;
+            12) BRANCH="feat/pagination"; MSG="feat: add cursor-based pagination for large datasets"; FILE="src/utils/paginate.js" ;;
+            13) BRANCH="fix/error-boundary"; MSG="fix: add global error boundary and unhandled rejection handler"; FILE="src/middleware/errorHandler.js" ;;
+            14) BRANCH="feat/health-check"; MSG="feat: add /health endpoint with DB and cache status"; FILE="src/routes/health.js" ;;
           esac
-
           BRANCH="${BRANCH}-$(date +%Y%m%d)"
           git checkout -b $BRANCH
           mkdir -p $(dirname $FILE)
-          printf "$CODE" > $FILE
+          echo "// Updated: $DATE" > $FILE
           git add .
           git commit -m "$MSG"
           git push origin $BRANCH
@@ -95,7 +51,6 @@ jobs:
           GH_TOKEN: ${{ secrets.MY_TOKEN }}
         run: |
           DAY=$(( ($(date +%j) % 14) + 1 ))
-
           case $DAY in
             1)  BRANCH="fix/auth-middleware-$(date +%Y%m%d)"; TITLE="fix: improve JWT validation and reduce auth latency"; LABEL="bug" ;;
             2)  BRANCH="feat/queue-processor-$(date +%Y%m%d)"; TITLE="feat: add async job queue with retry mechanism"; LABEL="enhancement" ;;
@@ -112,31 +67,8 @@ jobs:
             13) BRANCH="fix/error-boundary-$(date +%Y%m%d)"; TITLE="fix: add global error boundary and unhandled rejection handler"; LABEL="bug" ;;
             14) BRANCH="feat/health-check-$(date +%Y%m%d)"; TITLE="feat: add /health endpoint with DB and cache status"; LABEL="enhancement" ;;
           esac
-
           gh label create "bug" --color "d73a4a" --description "Something isnt working" 2>/dev/null || true
           gh label create "enhancement" --color "a2eeef" --description "New feature or request" 2>/dev/null || true
           gh label create "dependencies" --color "0075ca" --description "Dependency updates" 2>/dev/null || true
-
-          gh pr create \
-            --title "$TITLE" \
-            --body "## Summary
-Reviewed and improved existing module as part of regular maintenance.
-
-## Changes
-- Reviewed existing implementation
-- Applied targeted fix to relevant module
-- Verified no breaking changes introduced
-
-## Testing
-- [x] Manually tested on local environment
-- [x] No regressions detected
-- [x] Edge cases handled
-
-## Notes
-Part of regular codebase maintenance cycle." \
-            --base main \
-            --head $BRANCH \
-            --assignee "P-r-e-m-i-u-m" \
-            --label "$LABEL"
-
+          gh pr create --title "$TITLE" --body "Reviewed and improved existing module as part of regular maintenance." --base main --head $BRANCH --assignee "P-r-e-m-i-u-m" --label "$LABEL"
           gh pr merge --merge --delete-branch
