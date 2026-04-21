@@ -1,0 +1,200 @@
+name: Setup Project Structure
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MY_TOKEN }}
+
+      - name: Create project structure
+        run: |
+          git config user.email "amanbaba9404522@gmail.com"
+          git config user.name "P-r-e-m-i-u-m"
+
+          # README.md
+          printf '%s\n' \
+            '# NodeFlow API' \
+            '' \
+            '> A high-performance REST API built with Node.js, Redis caching, JWT auth, and PostgreSQL.' \
+            '' \
+            '![Node.js](https://img.shields.io/badge/Node.js-18.x-green)' \
+            '![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue)' \
+            '![Redis](https://img.shields.io/badge/Redis-7.x-red)' \
+            '![License](https://img.shields.io/badge/license-MIT-brightgreen)' \
+            '' \
+            '## Features' \
+            '- JWT authentication with Redis session caching' \
+            '- Rate limiting middleware to prevent API abuse' \
+            '- Cursor-based pagination for large datasets' \
+            '- Structured logging with log levels' \
+            '- Async retry logic for external API calls' \
+            '- Composite DB indexing for query performance' \
+            '- CORS policy hardened for production' \
+            '- Health check endpoint with DB and cache status' \
+            '' \
+            '## Tech Stack' \
+            '| Layer | Technology |' \
+            '|-------|-----------|' \
+            '| Runtime | Node.js 18 |' \
+            '| Database | PostgreSQL 15 |' \
+            '| Cache | Redis 7 |' \
+            '| Auth | JWT + bcrypt |' \
+            '| Queue | Bull (Redis-backed) |' \
+            '| Logging | Custom structured logger |' \
+            '' \
+            '## Getting Started' \
+            '' \
+            '```bash' \
+            'git clone https://github.com/P-r-e-m-i-u-m/nodeflow-api' \
+            'cd nodeflow-api' \
+            'cp .env.example .env' \
+            'npm install' \
+            'npm run dev' \
+            '```' \
+            '' \
+            '## Project Structure' \
+            '```' \
+            'src/' \
+            '├── config/        # CORS, DB, Redis config' \
+            '├── middleware/    # Auth, rate limiter, error handler' \
+            '├── routes/        # API route definitions' \
+            '├── services/      # Business logic, cache, logger' \
+            '├── utils/         # Pagination, retry, sanitize' \
+            '└── db/' \
+            '    └── migrations/ # SQL migration files' \
+            '```' \
+            '' \
+            '## Environment Variables' \
+            'Copy `.env.example` and fill in your values.' \
+            '' \
+            '## License' \
+            'MIT' > README.md
+
+          # package.json
+          printf '%s\n' \
+            '{' \
+            '  "name": "nodeflow-api",' \
+            '  "version": "1.4.0",' \
+            '  "description": "High-performance REST API with Redis caching and JWT auth",' \
+            '  "main": "src/index.js",' \
+            '  "scripts": {' \
+            '    "start": "node src/index.js",' \
+            '    "dev": "nodemon src/index.js",' \
+            '    "test": "jest --coverage",' \
+            '    "lint": "eslint src/**/*.js",' \
+            '    "migrate": "node src/db/migrate.js"' \
+            '  },' \
+            '  "dependencies": {' \
+            '    "express": "^4.18.2",' \
+            '    "jsonwebtoken": "^9.0.0",' \
+            '    "bcryptjs": "^2.4.3",' \
+            '    "redis": "^4.6.7",' \
+            '    "pg": "^8.11.1",' \
+            '    "bull": "^4.11.3",' \
+            '    "cors": "^2.8.5",' \
+            '    "helmet": "^7.0.0",' \
+            '    "express-rate-limit": "^6.9.0",' \
+            '    "dotenv": "^16.3.1",' \
+            '    "aiohttp": "^3.8.5"' \
+            '  },' \
+            '  "devDependencies": {' \
+            '    "nodemon": "^3.0.1",' \
+            '    "jest": "^29.6.2",' \
+            '    "eslint": "^8.47.0",' \
+            '    "supertest": "^6.3.3"' \
+            '  },' \
+            '  "engines": {' \
+            '    "node": ">=18.0.0"' \
+            '  },' \
+            '  "license": "MIT"' \
+            '}' > package.json
+
+          # .env.example
+          printf '%s\n' \
+            '# Server' \
+            'PORT=3000' \
+            'NODE_ENV=production' \
+            '' \
+            '# Database' \
+            'DB_HOST=localhost' \
+            'DB_PORT=5432' \
+            'DB_NAME=nodeflow' \
+            'DB_USER=postgres' \
+            'DB_PASSWORD=your_password_here' \
+            'DB_POOL_SIZE=10' \
+            '' \
+            '# Redis' \
+            'REDIS_HOST=localhost' \
+            'REDIS_PORT=6379' \
+            'REDIS_PASSWORD=your_redis_password' \
+            'REDIS_TTL=3600' \
+            '' \
+            '# JWT' \
+            'JWT_SECRET=your_super_secret_key_here' \
+            'JWT_EXPIRES_IN=7d' \
+            'JWT_REFRESH_SECRET=your_refresh_secret_here' \
+            '' \
+            '# CORS' \
+            'ALLOWED_ORIGINS=https://yourdomain.com,https://app.yourdomain.com' \
+            '' \
+            '# Rate Limiting' \
+            'RATE_LIMIT_WINDOW_MS=900000' \
+            'RATE_LIMIT_MAX=100' \
+            '' \
+            '# Logging' \
+            'LOG_LEVEL=info' \
+            'LOG_FORMAT=json' > .env.example
+
+          # Dockerfile
+          printf '%s\n' \
+            'FROM node:18-alpine AS base' \
+            'WORKDIR /app' \
+            '' \
+            '# Install dependencies' \
+            'FROM base AS deps' \
+            'COPY package*.json ./' \
+            'RUN npm ci --only=production' \
+            '' \
+            '# Build stage' \
+            'FROM base AS build' \
+            'COPY package*.json ./' \
+            'RUN npm ci' \
+            'COPY . .' \
+            '' \
+            '# Production stage' \
+            'FROM base AS runner' \
+            'ENV NODE_ENV=production' \
+            '' \
+            'RUN addgroup --system --gid 1001 nodejs' \
+            'RUN adduser --system --uid 1001 nodeuser' \
+            '' \
+            'COPY --from=deps /app/node_modules ./node_modules' \
+            'COPY --from=build /app/src ./src' \
+            'COPY --from=build /app/package.json ./package.json' \
+            '' \
+            'USER nodeuser' \
+            '' \
+            'EXPOSE 3000' \
+            '' \
+            'HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \' \
+            '  CMD node -e "require('"'"'http'"'"').get('"'"'http://localhost:3000/health'"'"', r => r.statusCode === 200 ? process.exit(0) : process.exit(1))"' \
+            '' \
+            'CMD ["node", "src/index.js"]' > Dockerfile
+
+          # .gitignore
+          printf '%s\n' \
+            'node_modules/' \
+            '.env' \
+            'dist/' \
+            'coverage/' \
+            '*.log' \
+            '.DS_Store' > .gitignore
+
+          git add .
+          git commit -m "chore: scaffold production project structure with Docker and env config"
+          git push
