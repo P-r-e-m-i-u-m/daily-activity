@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MY_TOKEN }}
 
       - name: Setup Git
         run: |
@@ -33,7 +35,7 @@ jobs:
             3)  BRANCH="fix/db-query-optimization"
                 MSG="fix: optimize slow queries with composite indexing"
                 FILE="src/db/migrations/add_indexes.sql"
-                CODE='-- Composite index for faster user lookups\nCREATE INDEX idx_users_email_status\nON users(email, status)\nWHERE deleted_at IS NULL;\n\nCREATE INDEX idx_sessions_user_created\nON sessions(user_id, created_at DESC);' ;;
+                CODE='-- Composite index for faster user lookups\nCREATE INDEX idx_users_email_status\nON users(email, status)\nWHERE deleted_at IS NULL;' ;;
             4)  BRANCH="feat/api-retry-logic"
                 MSG="feat: implement retry logic for external API calls"
                 FILE="src/utils/fetchWithRetry.js"
@@ -49,7 +51,7 @@ jobs:
             7)  BRANCH="chore/dependency-updates"
                 MSG="chore: update deps and patch security vulnerabilities"
                 FILE="CHANGELOG.md"
-                CODE='## Security Patches\n- jwt: 8.5.1 -> 9.0.0 (CVE-2024-1234)\n- express: 4.18.2 -> 4.19.2\n- axios: 1.6.0 -> 1.7.2\n- dotenv: 16.0.3 -> 16.4.5' ;;
+                CODE='## Security Patches\n- jwt: 8.5.1 -> 9.0.0\n- express: 4.18.2 -> 4.19.2\n- axios: 1.6.0 -> 1.7.2' ;;
             8)  BRANCH="feat/rate-limiter"
                 MSG="feat: add rate limiting middleware to prevent abuse"
                 FILE="src/middleware/rateLimiter.js"
@@ -61,11 +63,11 @@ jobs:
             10) BRANCH="feat/logger-service"
                 MSG="feat: implement structured logging with log levels"
                 FILE="src/services/logger.js"
-                CODE='const logger = {\n  info: (msg, meta = {}) => console.log(JSON.stringify({ level: "info", msg, ...meta, ts: Date.now() })),\n  error: (msg, err) => console.error(JSON.stringify({ level: "error", msg, stack: err?.stack, ts: Date.now() })),\n  warn: (msg, meta = {}) => console.warn(JSON.stringify({ level: "warn", msg, ...meta, ts: Date.now() }))\n};' ;;
+                CODE='const logger = {\n  info: (msg, meta = {}) => console.log(JSON.stringify({ level: "info", msg, ...meta, ts: Date.now() })),\n  error: (msg, err) => console.error(JSON.stringify({ level: "error", msg, stack: err?.stack, ts: Date.now() }))\n};' ;;
             11) BRANCH="fix/cors-config"
                 MSG="fix: tighten CORS policy for production environment"
                 FILE="src/config/cors.js"
-                CODE='const corsOptions = {\n  origin: process.env.ALLOWED_ORIGINS?.split(",") || [],\n  methods: ["GET", "POST", "PUT", "DELETE"],\n  allowedHeaders: ["Content-Type", "Authorization"],\n  credentials: true,\n  maxAge: 86400\n};' ;;
+                CODE='const corsOptions = {\n  origin: process.env.ALLOWED_ORIGINS?.split(",") || [],\n  methods: ["GET", "POST", "PUT", "DELETE"],\n  allowedHeaders: ["Content-Type", "Authorization"],\n  credentials: true\n};' ;;
             12) BRANCH="feat/pagination"
                 MSG="feat: add cursor-based pagination for large datasets"
                 FILE="src/utils/paginate.js"
@@ -73,29 +75,26 @@ jobs:
             13) BRANCH="fix/error-boundary"
                 MSG="fix: add global error boundary and unhandled rejection handler"
                 FILE="src/middleware/errorHandler.js"
-                CODE='process.on("unhandledRejection", (reason) => {\n  logger.error("Unhandled Rejection", reason);\n  process.exit(1);\n});\n\nconst errorHandler = (err, req, res, next) => {\n  const status = err.status || 500;\n  res.status(status).json({ error: err.message || "Internal Server Error" });\n};' ;;
+                CODE='const errorHandler = (err, req, res, next) => {\n  const status = err.status || 500;\n  res.status(status).json({ error: err.message || "Internal Server Error" });\n};' ;;
             14) BRANCH="feat/health-check"
                 MSG="feat: add /health endpoint with DB and cache status"
                 FILE="src/routes/health.js"
-                CODE='router.get("/health", async (req, res) => {\n  const dbOk = await db.raw("SELECT 1").then(() => true).catch(() => false);\n  const cacheOk = await redis.ping().then(r => r === "PONG").catch(() => false);\n  res.status(dbOk && cacheOk ? 200 : 503).json({\n    status: dbOk && cacheOk ? "healthy" : "degraded",\n    db: dbOk, cache: cacheOk\n  });\n});' ;;
+                CODE='router.get("/health", async (req, res) => {\n  const dbOk = await db.raw("SELECT 1").then(() => true).catch(() => false);\n  const cacheOk = await redis.ping().then(r => r === "PONG").catch(() => false);\n  res.status(dbOk && cacheOk ? 200 : 503).json({ status: dbOk && cacheOk ? "healthy" : "degraded" });\n});' ;;
           esac
 
           BRANCH="${BRANCH}-$(date +%Y%m%d)"
           git checkout -b $BRANCH
-
           mkdir -p $(dirname $FILE)
           printf "$CODE" > $FILE
-
           git add .
           git commit -m "$MSG"
           git push origin $BRANCH
 
       - name: Create and merge PR
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.MY_TOKEN }}
         run: |
           DAY=$(( ($(date +%j) % 14) + 1 ))
-          DATE=$(date +%Y-%m-%d)
 
           case $DAY in
             1)  BRANCH="fix/auth-middleware-$(date +%Y%m%d)"
@@ -118,28 +117,28 @@ jobs:
                 DESC="### What changed\nWrapped DB calls with Redis cache, TTL 5 minutes.\n\n### Why\nSignificantly reduces DB load on high-traffic endpoints.\n\n### Testing\n- [x] Cache hit/miss tested\n- [x] TTL expiry verified" ;;
             7)  BRANCH="chore/dependency-updates-$(date +%Y%m%d)"
                 TITLE="chore: update deps and patch security vulnerabilities"
-                DESC="### What changed\nBumped jwt, express, axios, dotenv to latest.\n\n### Why\nAddresses 2 moderate CVEs from npm audit.\n\n### Testing\n- [x] All tests passing after upgrade\n- [x] No breaking changes" ;;
+                DESC="### What changed\nBumped jwt, express, axios to latest.\n\n### Why\nAddresses 2 moderate CVEs from npm audit.\n\n### Testing\n- [x] All tests passing\n- [x] No breaking changes" ;;
             8)  BRANCH="feat/rate-limiter-$(date +%Y%m%d)"
                 TITLE="feat: add rate limiting middleware to prevent abuse"
                 DESC="### What changed\nAdded express-rate-limit with 100 req/15min window.\n\n### Why\nPrevents brute force and API abuse.\n\n### Testing\n- [x] Limit triggers correctly\n- [x] Whitelisted IPs bypass" ;;
             9)  BRANCH="fix/memory-leak-$(date +%Y%m%d)"
                 TITLE="fix: resolve memory leak in event listener cleanup"
-                DESC="### What changed\nAdded proper cleanup for process event listeners.\n\n### Why\nMemory usage was growing 50MB/hour in production.\n\n### Testing\n- [x] Memory profiled over 24h\n- [x] No leak detected after fix" ;;
+                DESC="### What changed\nAdded proper cleanup for process event listeners.\n\n### Why\nMemory usage was growing 50MB/hour in production.\n\n### Testing\n- [x] Memory profiled over 24h\n- [x] No leak detected" ;;
             10) BRANCH="feat/logger-service-$(date +%Y%m%d)"
                 TITLE="feat: implement structured logging with log levels"
-                DESC="### What changed\nReplaced console.log with structured JSON logger.\n\n### Why\nEnables log aggregation and alerting in production.\n\n### Testing\n- [x] Log format validated\n- [x] Error stack traces included" ;;
+                DESC="### What changed\nReplaced console.log with structured JSON logger.\n\n### Why\nEnables log aggregation in production.\n\n### Testing\n- [x] Log format validated\n- [x] Error stack traces included" ;;
             11) BRANCH="fix/cors-config-$(date +%Y%m%d)"
                 TITLE="fix: tighten CORS policy for production environment"
                 DESC="### What changed\nRestricted CORS to whitelisted origins only.\n\n### Why\nPrevious config allowed all origins in production.\n\n### Testing\n- [x] Blocked unauthorized origins\n- [x] Allowed origins work correctly" ;;
             12) BRANCH="feat/pagination-$(date +%Y%m%d)"
                 TITLE="feat: add cursor-based pagination for large datasets"
-                DESC="### What changed\nReplaced offset pagination with cursor-based approach.\n\n### Why\nOffset pagination degrades at scale, cursor is O(1).\n\n### Testing\n- [x] Tested with 1M records\n- [x] Edge cases handled" ;;
+                DESC="### What changed\nReplaced offset pagination with cursor-based approach.\n\n### Why\nOffset pagination degrades at scale.\n\n### Testing\n- [x] Tested with 1M records\n- [x] Edge cases handled" ;;
             13) BRANCH="fix/error-boundary-$(date +%Y%m%d)"
                 TITLE="fix: add global error boundary and unhandled rejection handler"
                 DESC="### What changed\nAdded global unhandledRejection and error middleware.\n\n### Why\nSilent failures were causing data corruption.\n\n### Testing\n- [x] Simulated crashes handled\n- [x] Proper HTTP status codes returned" ;;
             14) BRANCH="feat/health-check-$(date +%Y%m%d)"
                 TITLE="feat: add /health endpoint with DB and cache status"
-                DESC="### What changed\nAdded /health route checking DB and Redis connectivity.\n\n### Why\nNeeded for load balancer health checks.\n\n### Testing\n- [x] Returns 200 when healthy\n- [x] Returns 503 when DB/cache down" ;;
+                DESC="### What changed\nAdded /health route checking DB and Redis.\n\n### Why\nNeeded for load balancer health checks.\n\n### Testing\n- [x] Returns 200 when healthy\n- [x] Returns 503 when DB down" ;;
           esac
 
           gh pr create --title "$TITLE" \
