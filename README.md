@@ -1,36 +1,56 @@
-# daily-activity
+# NodeFlow API
 
-> Active development log — tracking improvements, fixes, and optimizations.
+> A high-performance REST API built with Node.js, Redis caching, JWT auth, and PostgreSQL.
 
-![GitHub commits](https://img.shields.io/github/commit-activity/m/P-r-e-m-i-u-m/daily-activity)
-![Last Commit](https://img.shields.io/github/last-commit/P-r-e-m-i-u-m/daily-activity)
-![Repo Size](https://img.shields.io/github/repo-size/P-r-e-m-i-u-m/daily-activity)
-![Top Language](https://img.shields.io/github/languages/top/P-r-e-m-i-u-m/daily-activity)
+![Node.js](https://img.shields.io/badge/Node.js-18.x-green)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue)
+![Redis](https://img.shields.io/badge/Redis-7.x-red)
+![License](https://img.shields.io/badge/license-MIT-brightgreen)
 
-## 📌 Latest Update — 2026-04-21
-**Fixed race condition in async queue processor**
+## Features
+- JWT authentication with Redis session caching
+- Rate limiting middleware to prevent API abuse
+- Cursor-based pagination for large datasets
+- Structured logging with log levels
+- Async retry logic for external API calls
+- Composite DB indexing for query performance
+- CORS policy hardened for production
+- Health check endpoint with DB and cache status
 
-```javascript
-const processQueue = async (queue) => {
- const lock = await acquireLock(queue.id);
- try {
- const jobs = await queue.getPending();
- await Promise.allSettled(jobs.map(job => job.process()));
- } finally {
- await lock.release();
- }
-};
+## Tech Stack
+| Layer | Technology |
+|-------|-----------|
+| Runtime | Node.js 18 |
+| Database | PostgreSQL 15 |
+| Cache | Redis 7 |
+| Auth | JWT + bcrypt |
+| Queue | Bull (Redis-backed) |
+| Logging | Custom structured logger |
+
+## Getting Started
+
+```bash
+git clone https://github.com/P-r-e-m-i-u-m/nodeflow-api
+cd nodeflow-api
+cp .env.example .env
+npm install
+npm run dev
 ```
 
-## 🛠️ Recent Activity
-| Date | Type | Description |
-|------|------|-------------|
-| 2026-04-21 | fix | Fixed race condition in async queue processor |
-| 2026-04-19 | refactor | Cleaned up legacy code |
-| 2026-04-17 | perf | Improved response time |
+## Project Structure
+```
+src/
+├── config/        # CORS, DB, Redis config
+├── middleware/    # Auth, rate limiter, error handler
+├── routes/        # API route definitions
+├── services/      # Business logic, cache, logger
+├── utils/         # Pagination, retry, sanitize
+└── db/
+    └── migrations/ # SQL migration files
+```
 
-## 🧰 Tech Stack
-![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black)
-![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat&logo=nodedotjs&logoColor=white)
-![Redis](https://img.shields.io/badge/Redis-DC382D?style=flat&logo=redis&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat&logo=postgresql&logoColor=white)
+## Environment Variables
+Copy `.env.example` and fill in your values.
+
+## License
+MIT
