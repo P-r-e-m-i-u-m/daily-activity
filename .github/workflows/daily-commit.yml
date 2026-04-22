@@ -39,7 +39,7 @@ jobs:
                 '' \
                 'module.exports = { validateToken };' \
                 "// updated: $DATE build: $TS" > src/middleware/auth.js
-              MSG="fix: improve JWT validation with Redis caching" ;;
+              MSG="fix: #2 improve JWT validation with Redis session caching" ;;
 
             2)
               mkdir -p src/utils
@@ -58,7 +58,7 @@ jobs:
                 '                raise e' \
                 '            await asyncio.sleep(2 ** attempt)' \
                 "# updated: $DATE build: $TS" > src/utils/fetchWithRetry.py
-              MSG="feat: add async retry logic for external API calls" ;;
+              MSG="feat: #10 add async retry logic with exponential backoff" ;;
 
             3)
               mkdir -p src/db/migrations
@@ -74,7 +74,7 @@ jobs:
                 'CREATE INDEX IF NOT EXISTS idx_logs_created_level' \
                 'ON logs(created_at DESC, level)' \
                 "-- updated: $DATE build: $TS" > src/db/migrations/add_indexes.sql
-              MSG="fix: add composite indexes to improve query performance" ;;
+              MSG="fix: #8 add composite indexes to improve query performance" ;;
 
             4)
               mkdir -p src/services
@@ -92,7 +92,7 @@ jobs:
                 '' \
                 'module.exports = { withCache };' \
                 "// updated: $DATE build: $TS" > src/services/cache.js
-              MSG="feat: add Redis caching layer for hot data" ;;
+              MSG="feat: #5 add Redis caching layer for hot data" ;;
 
             5)
               mkdir -p src/utils
@@ -114,7 +114,7 @@ jobs:
                 '    has_more = len(items) > limit' \
                 '    return PaginationResult(items=items[:limit], next_cursor=str(items[limit-1].id) if has_more else None, has_more=has_more)' \
                 "# updated: $DATE build: $TS" > src/utils/paginate.py
-              MSG="feat: implement cursor-based pagination for large datasets" ;;
+              MSG="feat: #3 implement cursor-based pagination for large datasets" ;;
 
             6)
               mkdir -p src/config
@@ -136,7 +136,7 @@ jobs:
                 '' \
                 'module.exports = corsOptions;' \
                 "// updated: $DATE build: $TS" > src/config/cors.js
-              MSG="fix: tighten CORS policy for production security" ;;
+              MSG="fix: #4 tighten CORS policy for production security" ;;
 
             7)
               mkdir -p src/services
@@ -157,7 +157,7 @@ jobs:
                 '' \
                 'export default logger;' \
                 "// updated: $DATE build: $TS" > src/services/logger.ts
-              MSG="feat: implement structured TypeScript logger with log levels" ;;
+              MSG="feat: #7 implement structured TypeScript logger with log levels" ;;
           esac
 
           git add .
