@@ -1,0 +1,235 @@
+name: Create GitHub Issues
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create issues
+        env:
+          GH_TOKEN: ${{ secrets.MY_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+
+          gh issue create --repo $REPO --label "bug" --title "Memory leak causing server RAM to climb ~40MB/hr under normal load" --body "## Problem
+
+          Noticed our staging server RAM usage climbs from ~280MB to ~1.1GB over roughly 18 hours before we have to restart the process. After some profiling with node --inspect and Chrome DevTools heap snapshots, it looks like EventEmitter listeners are being added on every incoming request but never cleaned up.
+
+          ## Steps to Reproduce
+          1. Run the server locally with NODE_ENV=production
+          2. Hit any authenticated endpoint in a loop (e.g. wrk -t4 -c50 -d60s)
+          3. Take heap snapshot before and after
+          4. Filter by Detached in the snapshot — you will see hundreds of detached EventEmitter nodes
+
+          ## Root Cause (suspected)
+          In src/services/eventHandler.js we attach a data listener inside the request handler but never call removeListener or use once(). Each request leaks one listener.
+
+          ## Expected
+          Memory should stay flat under sustained load. Listeners must be removed in a finally block or use emitter.once() where appropriate.
+
+          ## Environment
+          - Node.js v18.17.0
+          - express 4.18.2
+          - Deployed on Ubuntu 22.04 / 2 vCPU / 4GB RAM
+          - Observed in both staging and reproduced locally"
+
+          gh issue create --repo $REPO --label "bug" --title "JWT tokens remain valid after logout — no invalidation mechanism" --body "## Problem
+
+          Users who log out can still make authenticated API requests using their old token until it naturally expires (currently set to 7d). This is a serious security gap — if a token is stolen after the user logs out, the attacker has up to 7 days of access.
+
+          ## Steps to Reproduce
+          1. Login via POST /api/auth/login — capture the JWT
+          2. Call POST /api/auth/logout
+          3. Use the captured JWT to call GET /api/users/me
+          4. You will get 200 OK — should be 401
+
+          ## Expected Behavior
+          After logout, the token should be rejected immediately. Standard approach is to store the token JTI (JWT ID) in a Redis blacklist with TTL matching the token expiry.
+
+          ## Proposed Fix
+          - Add jti claim when signing tokens
+          - On logout, store jti in Redis with SETEX using remaining TTL
+          - In auth middleware, check Redis blacklist before accepting token
+
+          ## Impact
+          High — affects all users. Any stolen session token post-logout is indefinitely valid."
+
+          gh issue create --repo $REPO --label "enhancement" --title "Offset pagination on /api/users breaks and slows down past page 50" --body "## Problem
+
+          We are using standard LIMIT/OFFSET pagination on the users endpoint. This has two issues that are starting to hurt us as the table grows:
+
+          1. Performance: At OFFSET 5000, Postgres still scans 5000 rows just to skip them. EXPLAIN ANALYZE shows Seq Scan cost climbing linearly.
+          2. Correctness: If a new user is inserted between page fetches, pages shift — users get duplicated or skipped in the client.
+
+          ## Current Behavior
+          GET /api/users?page=3&limit=20 → uses OFFSET 40 internally
+
+          ## Expected Behavior
+          GET /api/users?cursor=eyJpZCI6MTIzfQ&limit=20 → uses WHERE id > 123 LIMIT 20
+
+          ## Implementation Notes
+          - Cursor should be base64-encoded JSON containing the last seen id and created_at
+          - Index on (id, created_at) already exists — this will be fast
+          - Response should include next_cursor: null when no more pages
+
+          ## References
+          - https://use-the-index-luke.com/no-offset
+          - Slack discussion from last Thursday in #backend"
+
+          gh issue create --repo $REPO --label "bug" --title "CORS allowing all origins in staging — same config should match prod" --body "## Problem
+
+          Staging API is currently returning Access-Control-Allow-Origin: * for all requests. This means any website can make credentialed requests to our staging API, which has real data (anonymized but still).
+
+          Found this because a junior dev testing a side project accidentally hit our staging /api/products endpoint from localhost:3001 and it worked fine — that should have been blocked.
+
+          ## Current Config (staging)
+          origin: true  -- allows everything
+
+          ## Production Config
+          origin: ['https://app.nodeflow.io', 'https://admin.nodeflow.io']
+
+          ## Expected
+          Staging should use the same allowlist as production, just with staging domains added. This ensures CORS bugs are caught before they reach prod.
+
+          ## Fix
+          Move CORS config to environment variable ALLOWED_ORIGINS and load it from .env — already done in prod, just not wired up in staging deploy pipeline."
+
+          gh issue create --repo $REPO --label "enhancement" --title "Add Redis caching to high-traffic endpoints — DB getting hammered" --body "## Problem
+
+          Looking at our DB slow query log and Datadog metrics, GET /api/products and GET /api/users/me are being called 800-1200 times/min during peak hours. Both queries hit the DB every single time with no caching.
+
+          Our RDS instance is sitting at 85-90% CPU during peak — this is unsustainable as we scale.
+
+          ## Proposed Solution
+          Add a caching layer using our existing Redis instance:
+          - Cache key pattern: cache:{endpoint}:{userId or queryHash}
+          - TTL: 300s for product listings, 60s for user profile
+          - Invalidate on write operations (PUT/PATCH/DELETE)
+
+          ## Expected Impact
+          Based on cache hit rate estimates (~75%), this should reduce DB queries by ~600/min at peak — should bring CPU back under 40%.
+
+          ## Notes
+          - We already have Redis running (used for sessions)
+          - Avoid caching responses that contain PII beyond what is already in the session
+          - Need cache-control headers updated too for any CDN layer"
+
+          gh issue create --repo $REPO --label "bug" --title "No rate limiting on /api/auth/login — brute force is trivially easy" --body "## Problem
+
+          Ran a quick test with a simple Python script hitting POST /api/auth/login in a loop — made 500 attempts in under 30 seconds with no throttling, no lockout, no CAPTCHA trigger. This makes credential stuffing and brute force attacks trivially easy.
+
+          ## Test Script Used
+          for i in range(500):
+              requests.post('/api/auth/login', json={'email': 'user@test.com', 'password': f'attempt{i}'})
+
+          All 500 returned either 200 or 401 with no rate limit headers, no 429 response.
+
+          ## Expected Behavior
+          After 5 failed attempts from the same IP within 15 minutes:
+          - Return 429 Too Many Requests
+          - Include Retry-After header
+          - Log the event for security monitoring
+
+          ## Proposed Implementation
+          Use express-rate-limit with Redis store (rate-limit-redis) so limits work across multiple server instances.
+
+          ## Severity
+          Critical — this is a P0 security issue on any public-facing auth endpoint."
+
+          gh issue create --repo $REPO --label "enhancement" --title "Replace console.log with structured JSON logger — logs are unparseable in prod" --body "## Problem
+
+          Our current logging is a mix of console.log, console.error, and some random util/logger.js that was added last year and is only used in 3 files. In production (CloudWatch / Datadog), unstructured logs are nearly impossible to filter or alert on.
+
+          Example of current log output:
+          Error in auth middleware TypeError: Cannot read property id of undefined
+          User logged in: john@example.com
+          DB query took 1823ms
+
+          None of these have timestamps, request IDs, severity levels, or service context.
+
+          ## Expected Log Format
+          {\"level\":\"error\",\"msg\":\"auth middleware failed\",\"requestId\":\"abc-123\",\"userId\":null,\"stack\":\"...\",\"ts\":1720000000000}
+
+          ## Requirements
+          - Levels: debug / info / warn / error
+          - Always include: ts, level, msg, requestId, service
+          - Conditionally include: userId, route, statusCode, durationMs
+          - In development: pretty-print with colors
+          - In production: JSON only, no colors
+
+          ## Notes
+          We should not add pino or winston as a new dep right now — the custom logger in src/services/logger.ts should be extended to handle this."
+
+          gh issue create --repo $REPO --label "bug" --title "Full table scan on orders — query time 4.2s at current data volume" --body "## Problem
+
+          Received an alert from our DB monitoring — the following query is taking 4.2 seconds at current volume (~2.1M rows in orders table):
+
+          SELECT * FROM orders WHERE user_id = \$1 ORDER BY created_at DESC LIMIT 20;
+
+          EXPLAIN ANALYZE output:
+          Seq Scan on orders (cost=0.00..58432.00 rows=2100000) (actual time=0.08..4187.23 rows=20 loops=1)
+
+          ## Root Cause
+          No index on (user_id, created_at). Postgres is doing a full sequential scan then sorting.
+
+          ## Fix
+          CREATE INDEX CONCURRENTLY idx_orders_user_created ON orders(user_id, created_at DESC);
+
+          Use CONCURRENTLY so it does not lock the table in production.
+
+          ## Expected After Fix
+          Index Scan using idx_orders_user_created (cost=0.43..8.47 rows=20) — sub 10ms
+
+          ## Also Check
+          Same pattern likely exists on the transactions and audit_logs tables — worth auditing all WHERE clauses that lack indexes."
+
+          gh issue create --repo $REPO --label "enhancement" --title "No health check endpoint — load balancer marking healthy instances as dead" --body "## Problem
+
+          Our AWS ALB is configured to health check on GET / which returns the full app HTML. This is slow (~300ms), and twice this week the ALB marked a healthy instance as unhealthy because the app was slow to respond to / during a DB migration.
+
+          We need a dedicated /health endpoint that:
+          1. Responds in under 50ms
+          2. Checks actual service dependencies (DB, Redis)
+          3. Returns structured JSON so we can monitor individual dependency health
+
+          ## Expected Response
+          GET /health → 200
+          {
+            status: ok,
+            db: ok,
+            redis: ok,
+            uptime: 38291,
+            version: 1.4.0
+          }
+
+          GET /health → 503 (if DB is down)
+          {
+            status: degraded,
+            db: unreachable,
+            redis: ok
+          }
+
+          ## Notes
+          - This endpoint should NOT require auth
+          - Should not be logged (too noisy)
+          - Kubernetes readiness probe can also use this once we migrate"
+
+          gh issue create --repo $REPO --label "bug" --title "Payment API calls fail hard on 5xx — no retry, losing transactions" --body "## Problem
+
+          Our Stripe and internal payment processor integrations call external APIs with a single fetch() and no error handling beyond catching the thrown error. When the payment API returns a 503 or 504 (which happens ~0.3% of requests), we immediately return a failure to the user and log it as a failed transaction.
+
+          This has caused roughly 15-20 false failed transactions per week based on our logs — users think their payment failed, retry manually, and sometimes get double charged.
+
+          ## Expected Behavior
+          On 5xx response or network timeout:
+          - Retry up to 3 times with exponential backoff (1s, 2s, 4s)
+          - On final failure, queue for manual review rather than hard failing
+          - Log each retry attempt with attempt number and delay
+
+          ## Implementation
+          src/utils/fetchWithRetry.js already exists but is not used in the payment service. Wire it in.
+
+          ## Impact
+          Medium-High — directly causes false payment failures and potential double charges."
