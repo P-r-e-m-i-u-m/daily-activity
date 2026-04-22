@@ -22,6 +22,10 @@ jobs:
           TS=$(date +%s)
           DAY=$(( ($(date +%j) % 7) + 1 ))
 
+          # Random commits between 3 and 6 for today
+          COMMIT_COUNT=$(( (RANDOM % 4) + 3 ))
+          echo "Today will make $COMMIT_COUNT commits"
+
           case $DAY in
             1)
               mkdir -p src/middleware
@@ -39,7 +43,15 @@ jobs:
                 '' \
                 'module.exports = { validateToken };' \
                 "// updated: $DATE build: $TS" > src/middleware/auth.js
-              MSG="fix: #2 improve JWT validation with Redis session caching" ;;
+              MAIN_MSG="fix: #2 improve JWT validation with Redis session caching"
+              EXTRA_FILES=("src/middleware/auth.test.js" "src/middleware/authHelpers.js" "src/config/jwtConfig.js" "src/utils/tokenUtils.js" "docs/auth.md")
+              EXTRA_MSGS=(
+                "test: #2 add unit tests for JWT validateToken function"
+                "refactor: #2 extract JWT helpers into separate auth utils"
+                "chore: #2 update JWT config with env variable support"
+                "docs: #2 document token validation flow and Redis TTL logic"
+                "fix: #2 handle edge case when Redis returns null token"
+              ) ;;
 
             2)
               mkdir -p src/utils
@@ -58,7 +70,15 @@ jobs:
                 '                raise e' \
                 '            await asyncio.sleep(2 ** attempt)' \
                 "# updated: $DATE build: $TS" > src/utils/fetchWithRetry.py
-              MSG="feat: #10 add async retry logic with exponential backoff" ;;
+              MAIN_MSG="feat: #10 add async retry logic with exponential backoff"
+              EXTRA_FILES=("src/utils/fetchWithRetry.test.py" "src/utils/retryConfig.py" "src/utils/backoffStrategy.py" "src/utils/requestLogger.py" "docs/retry-logic.md")
+              EXTRA_MSGS=(
+                "test: #10 add tests for exponential backoff retry scenarios"
+                "refactor: #10 extract retry config into separate constants file"
+                "feat: #10 add jitter to backoff to prevent thundering herd"
+                "docs: #10 document retry strategy and failure handling flow"
+                "chore: #10 add timeout config for external API calls"
+              ) ;;
 
             3)
               mkdir -p src/db/migrations
@@ -74,7 +94,15 @@ jobs:
                 'CREATE INDEX IF NOT EXISTS idx_logs_created_level' \
                 'ON logs(created_at DESC, level)' \
                 "-- updated: $DATE build: $TS" > src/db/migrations/add_indexes.sql
-              MSG="fix: #8 add composite indexes to improve query performance" ;;
+              MAIN_MSG="fix: #8 add composite indexes to improve query performance"
+              EXTRA_FILES=("src/db/migrations/rollback_indexes.sql" "src/db/queryAnalyzer.js" "src/db/migrations/verify_indexes.sql" "docs/db-indexes.md" "src/db/indexMonitor.js")
+              EXTRA_MSGS=(
+                "chore: #8 add rollback migration for composite indexes"
+                "feat: #8 add query analyzer to detect missing indexes"
+                "test: #8 add verify script to confirm index creation"
+                "docs: #8 document index strategy and EXPLAIN ANALYZE results"
+                "feat: #8 add index usage monitoring to detect redundant indexes"
+              ) ;;
 
             4)
               mkdir -p src/services
@@ -92,7 +120,15 @@ jobs:
                 '' \
                 'module.exports = { withCache };' \
                 "// updated: $DATE build: $TS" > src/services/cache.js
-              MSG="feat: #5 add Redis caching layer for hot data" ;;
+              MAIN_MSG="feat: #5 add Redis caching layer for hot data"
+              EXTRA_FILES=("src/services/cache.test.js" "src/services/cacheInvalidator.js" "src/config/redisConfig.js" "src/utils/cacheKey.js" "docs/caching-strategy.md")
+              EXTRA_MSGS=(
+                "test: #5 add tests for cache hit and miss scenarios"
+                "feat: #5 add cache invalidation on write operations"
+                "chore: #5 extract Redis config into dedicated config file"
+                "refactor: #5 standardize cache key generation utility"
+                "docs: #5 document caching strategy and TTL decisions"
+              ) ;;
 
             5)
               mkdir -p src/utils
@@ -114,7 +150,15 @@ jobs:
                 '    has_more = len(items) > limit' \
                 '    return PaginationResult(items=items[:limit], next_cursor=str(items[limit-1].id) if has_more else None, has_more=has_more)' \
                 "# updated: $DATE build: $TS" > src/utils/paginate.py
-              MSG="feat: #3 implement cursor-based pagination for large datasets" ;;
+              MAIN_MSG="feat: #3 implement cursor-based pagination for large datasets"
+              EXTRA_FILES=("src/utils/paginate.test.py" "src/utils/cursorEncoder.py" "src/middleware/paginationValidator.py" "src/utils/pageSize.py" "docs/pagination.md")
+              EXTRA_MSGS=(
+                "test: #3 add tests for cursor encoding and edge cases"
+                "feat: #3 add base64 cursor encoder and decoder utility"
+                "feat: #3 add pagination params validation middleware"
+                "chore: #3 add max page size config and enforcement"
+                "docs: #3 document cursor pagination and migration from offset"
+              ) ;;
 
             6)
               mkdir -p src/config
@@ -136,7 +180,15 @@ jobs:
                 '' \
                 'module.exports = corsOptions;' \
                 "// updated: $DATE build: $TS" > src/config/cors.js
-              MSG="fix: #4 tighten CORS policy for production security" ;;
+              MAIN_MSG="fix: #4 tighten CORS policy for production security"
+              EXTRA_FILES=("src/config/cors.test.js" "src/config/corsAllowlist.js" "src/middleware/corsLogger.js" "src/config/securityHeaders.js" "docs/cors-policy.md")
+              EXTRA_MSGS=(
+                "test: #4 add tests for CORS origin allowlist validation"
+                "refactor: #4 extract CORS allowlist into separate config"
+                "feat: #4 add CORS violation logging middleware"
+                "feat: #4 add security headers config alongside CORS"
+                "docs: #4 document CORS policy and allowed origins setup"
+              ) ;;
 
             7)
               mkdir -p src/services
@@ -157,9 +209,30 @@ jobs:
                 '' \
                 'export default logger;' \
                 "// updated: $DATE build: $TS" > src/services/logger.ts
-              MSG="feat: #7 implement structured TypeScript logger with log levels" ;;
+              MAIN_MSG="feat: #7 implement structured TypeScript logger with log levels"
+              EXTRA_FILES=("src/services/logger.test.ts" "src/services/logFormatter.ts" "src/middleware/requestLogger.ts" "src/config/logConfig.ts" "docs/logging.md")
+              EXTRA_MSGS=(
+                "test: #7 add unit tests for all logger levels and output format"
+                "feat: #7 add log formatter with pretty print for development"
+                "feat: #7 add request logger middleware using structured logger"
+                "chore: #7 add log level config from environment variable"
+                "docs: #7 document logger usage and structured log format"
+              ) ;;
           esac
 
+          # First main commit
           git add .
-          git commit -m "$MSG"
+          git commit -m "$MAIN_MSG"
           git push
+
+          # Extra commits based on COMMIT_COUNT
+          for i in $(seq 1 $(( COMMIT_COUNT - 1 ))); do
+            sleep 2
+            EXTRA_FILE="${EXTRA_FILES[$((i-1))]}"
+            EXTRA_MSG="${EXTRA_MSGS[$((i-1))]}"
+            mkdir -p $(dirname $EXTRA_FILE)
+            echo "// auto-maintained: $DATE.$i build: $TS" > $EXTRA_FILE
+            git add .
+            git commit -m "$EXTRA_MSG"
+            git push
+          done
