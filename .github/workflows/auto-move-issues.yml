@@ -1,0 +1,41 @@
+name: Auto Move Issues on Project Board
+
+on:
+  pull_request:
+    types: [opened, closed]
+
+jobs:
+  move-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Move issue to In Progress or Done
+        env:
+          GH_TOKEN: ${{ secrets.MY_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          PR_BODY="${{ github.event.pull_request.body }}"
+          PR_STATE="${{ github.event.pull_request.merged }}"
+
+          # Extract issue number from PR body (Closes #N)
+          ISSUE_NUM=$(echo "$PR_BODY" | grep -oP '(?<=Closes #)\d+' || true)
+
+          if [ -z "$ISSUE_NUM" ]; then
+            echo "No issue reference found in PR body"
+            exit 0
+          fi
+
+          echo "Found issue reference: #$ISSUE_NUM"
+
+          if [ "$PR_STATE" = "true" ]; then
+            echo "PR merged — issue #$ISSUE_NUM will be auto-closed by GitHub"
+          else
+            echo "PR opened — issue #$ISSUE_NUM is now in progress"
+            gh issue comment $ISSUE_NUM --repo $REPO \
+              --body "$(printf '%s\n' \
+                '**Status Update**' \
+                '' \
+                'A pull request has been opened to address this issue. Currently in review.' \
+                '' \
+                '---' \
+                "_$(date '+%a %b %d, %Y')_")"
+          fi
