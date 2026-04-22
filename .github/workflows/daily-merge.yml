@@ -71,5 +71,22 @@ jobs:
           gh label create "bug" --color "d73a4a" --description "Something isnt working" 2>/dev/null || true
           gh label create "enhancement" --color "a2eeef" --description "New feature or request" 2>/dev/null || true
           gh label create "dependencies" --color "0075ca" --description "Dependency updates" 2>/dev/null || true
-          gh pr create --title "$TITLE" --body "$(printf '### What changed\nApplied targeted improvements to the relevant module.\n\n### Why\nPart of ongoing codebase maintenance to ensure reliability and performance.\n\n### Testing\n- Verified locally\n- No breaking changes detected\n- Edge cases handled\n\n### Related\nRegular maintenance cycle — keeping dependencies and logic clean.')" --base main --head $BRANCH --assignee "P-r-e-m-i-u-m" --label "$LABEL"
+          gh pr create --title "$TITLE" --body "$(printf '%s\n' \
+            "### What changed" \
+            "Applied targeted improvements to the relevant module as part of sprint cycle." \
+            "" \
+            "### Why" \
+            "Part of ongoing codebase maintenance to ensure reliability and performance." \
+            "" \
+            "### Testing" \
+            "- Verified locally with unit tests" \
+            "- No breaking changes detected" \
+            "- Edge cases handled and documented" \
+            "" \
+            "### Closes" \
+            "Closes $ISSUE_REF" \
+            "" \
+            "---" \
+            "_Part of milestone v1.5.0 sprint cycle_")" \
+            --base main --head $BRANCH --assignee "P-r-e-m-i-u-m" --label "$LABEL"
           gh pr merge --merge --delete-branch
