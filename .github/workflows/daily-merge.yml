@@ -23,20 +23,20 @@ jobs:
           DAY=$(( ($(date +%j) % 14) + 1 ))
           DATE=$(date +%Y-%m-%d)
           case $DAY in
-            1)  BRANCH="fix/auth-middleware-$(date +%Y%m%d)"; TITLE="fix: #2 invalidate JWT tokens on logout via Redis blacklist"; LABEL="bug" ;;
-            2)  BRANCH="feat/queue-processor-$(date +%Y%m%d)"; TITLE="feat: #13 add async Bull queue for email notifications"; LABEL="enhancement" ;;
-            3)  BRANCH="fix/db-query-optimization-$(date +%Y%m%d)"; TITLE="fix: #8 add composite index on orders(user_id, created_at)"; LABEL="bug" ;;
-            4)  BRANCH="feat/api-retry-logic-$(date +%Y%m%d)"; TITLE="feat: #10 add exponential backoff retry for payment API calls"; LABEL="enhancement" ;;
-            5)  BRANCH="fix/input-validation-$(date +%Y%m%d)"; TITLE="fix: #12 sanitize HTML input on profile update endpoint"; LABEL="bug" ;;
-            6)  BRANCH="feat/cache-layer-$(date +%Y%m%d)"; TITLE="feat: #5 add Redis caching layer with 5min TTL on hot endpoints"; LABEL="enhancement" ;;
-            7)  BRANCH="chore/dependency-updates-$(date +%Y%m%d)"; TITLE="chore: update deps and patch security vulnerabilities"; LABEL="dependencies" ;;
-            8)  BRANCH="feat/rate-limiter-$(date +%Y%m%d)"; TITLE="feat: #6 apply rate limiting to auth routes via redis store"; LABEL="enhancement" ;;
-            9)  BRANCH="fix/memory-leak-$(date +%Y%m%d)"; TITLE="fix: #1 resolve memory leak in event listener cleanup"; LABEL="bug" ;;
-            10) BRANCH="feat/logger-service-$(date +%Y%m%d)"; TITLE="feat: #7 implement structured JSON logging with log levels"; LABEL="enhancement" ;;
-            11) BRANCH="fix/cors-config-$(date +%Y%m%d)"; TITLE="fix: #4 mirror production CORS policy in staging environment"; LABEL="bug" ;;
-            12) BRANCH="feat/pagination-$(date +%Y%m%d)"; TITLE="feat: #3 migrate users endpoint to cursor-based pagination"; LABEL="enhancement" ;;
-            13) BRANCH="fix/error-boundary-$(date +%Y%m%d)"; TITLE="fix: #20 add global handler for unhandled promise rejections"; LABEL="bug" ;;
-            14) BRANCH="feat/health-check-$(date +%Y%m%d)"; TITLE="feat: #9 add /health endpoint with DB and Redis status check"; LABEL="enhancement" ;;
+            1)  BRANCH="fix/auth-middleware-$(date +%Y%m%d)"; TITLE="fix: #2 invalidate JWT tokens on logout via Redis blacklist"; LABEL="bug"; ISSUE_REF="#2" ;;
+            2)  BRANCH="feat/queue-processor-$(date +%Y%m%d)"; TITLE="feat: #13 add async Bull queue for email notifications"; LABEL="enhancement"; ISSUE_REF="#13" ;;
+            3)  BRANCH="fix/db-query-optimization-$(date +%Y%m%d)"; TITLE="fix: #8 add composite index on orders(user_id, created_at)"; LABEL="bug"; ISSUE_REF="#8" ;;
+            4)  BRANCH="feat/api-retry-logic-$(date +%Y%m%d)"; TITLE="feat: #10 add exponential backoff retry for payment API calls"; LABEL="enhancement"; ISSUE_REF="#10" ;;
+            5)  BRANCH="fix/input-validation-$(date +%Y%m%d)"; TITLE="fix: #12 sanitize HTML input on profile update endpoint"; LABEL="bug"; ISSUE_REF="#12" ;;
+            6)  BRANCH="feat/cache-layer-$(date +%Y%m%d)"; TITLE="feat: #5 add Redis caching layer with 5min TTL on hot endpoints"; LABEL="enhancement"; ISSUE_REF="#5" ;;
+            7)  BRANCH="chore/dependency-updates-$(date +%Y%m%d)"; TITLE="chore: update deps and patch security vulnerabilities"; LABEL="dependencies"; ISSUE_REF="#27" ;;
+            8)  BRANCH="feat/rate-limiter-$(date +%Y%m%d)"; TITLE="feat: #6 apply rate limiting to auth routes via redis store"; LABEL="enhancement"; ISSUE_REF="#6" ;;
+            9)  BRANCH="fix/memory-leak-$(date +%Y%m%d)"; TITLE="fix: #1 resolve memory leak in event listener cleanup"; LABEL="bug"; ISSUE_REF="#1" ;;
+            10) BRANCH="feat/logger-service-$(date +%Y%m%d)"; TITLE="feat: #7 implement structured JSON logging with log levels"; LABEL="enhancement"; ISSUE_REF="#7" ;;
+            11) BRANCH="fix/cors-config-$(date +%Y%m%d)"; TITLE="fix: #4 mirror production CORS policy in staging environment"; LABEL="bug"; ISSUE_REF="#4" ;;
+            12) BRANCH="feat/pagination-$(date +%Y%m%d)"; TITLE="feat: #3 migrate users endpoint to cursor-based pagination"; LABEL="enhancement"; ISSUE_REF="#3" ;;
+            13) BRANCH="fix/error-boundary-$(date +%Y%m%d)"; TITLE="fix: #20 add global handler for unhandled promise rejections"; LABEL="bug"; ISSUE_REF="#20" ;;
+            14) BRANCH="feat/health-check-$(date +%Y%m%d)"; TITLE="feat: #9 add /health endpoint with DB and Redis status check"; LABEL="enhancement"; ISSUE_REF="#9" ;;
           esac
           BRANCH="${BRANCH}-$(date +%Y%m%d)"
           git checkout -b $BRANCH
