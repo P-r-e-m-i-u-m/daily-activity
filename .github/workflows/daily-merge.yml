@@ -1844,7 +1844,7 @@ jobs:
             'export const TOKEN_EXPIRY = 3600;' \
             'export const HEARTBEAT_INTERVAL = 30000;' > src/constants/index.ts
 
-          BRANCH="${BRANCH}-$(date +%Y%m%d)"
+          BRANCH="${BRANCH}-$(date +%Y%m%d%H%M%S%H%M%S)"
           git checkout -b $BRANCH
           git add .
           git commit -m "$MSG"
@@ -1858,59 +1858,59 @@ jobs:
           DATE=$(date +%Y-%m-%d)
 
           case $DAY in
-            1)  BRANCH="fix/auth-middleware-$(date +%Y%m%d)"; TITLE="fix: refactor JWT auth middleware with Redis caching"; LABEL="bug"
+            1)  BRANCH="fix/auth-middleware-$(date +%Y%m%d%H%M%S)"; TITLE="fix: refactor JWT auth middleware with Redis caching"; LABEL="bug"
                 SUMMARY="Refactored the JWT authentication middleware to use Redis as a token cache layer, reducing repeated DB lookups by approximately 60% on authenticated endpoints."
                 CHANGES="Extracted token validation into a dedicated validateToken function with Redis caching. Added requireRole middleware supporting multiple roles. Implemented token invalidation for logout support. Added refreshToken utility for seamless session extension."
                 TESTING="All existing auth tests updated. Added 8 new unit tests covering cache hit/miss scenarios, role enforcement, and token refresh. Load tested at 1000 req/s with no regressions." ;;
-            2)  BRANCH="feat/queue-processor-$(date +%Y%m%d)"; TITLE="feat: implement async job queue with retry and dead letter support"; LABEL="enhancement"
+            2)  BRANCH="feat/queue-processor-$(date +%Y%m%d%H%M%S)"; TITLE="feat: implement async job queue with retry and dead letter support"; LABEL="enhancement"
                 SUMMARY="Implemented a priority-based async job queue using Redis sorted sets with exponential backoff retry logic and dead letter queue support for failed jobs."
                 CHANGES="Built QueueProcessor class with enqueue, dequeue, process and getStats methods. Added configurable concurrency and poll interval. Dead letter queue stores failed jobs with error context for debugging. Priority queuing via Redis ZADD scores."
                 TESTING="Added 9 unit tests covering enqueue priorities, retry backoff, DLQ behaviour and stats tracking. Simulated 10k job throughput with no memory leaks detected." ;;
-            3)  BRANCH="fix/db-query-optimization-$(date +%Y%m%d)"; TITLE="fix: optimize slow queries with composite indexes and EXPLAIN analysis"; LABEL="bug"
+            3)  BRANCH="fix/db-query-optimization-$(date +%Y%m%d%H%M%S)"; TITLE="fix: optimize slow queries with composite indexes and EXPLAIN analysis"; LABEL="bug"
                 SUMMARY="Added 5 composite and partial indexes to high-traffic tables after EXPLAIN ANALYZE revealed full table scans causing 800ms+ query times on users, sessions and orders."
                 CHANGES="Added CONCURRENTLY-built composite indexes on users, sessions, orders, logs and events tables. Used partial indexes to exclude soft-deleted and inactive rows. Added covering index on sessions to avoid heap fetches. Updated query layer to leverage new indexes."
                 TESTING="Verified all indexes with EXPLAIN ANALYZE. Query time on findActiveByEmail dropped from 812ms to 43ms. No regression in write performance. Tested on staging dataset of 2M rows." ;;
-            4)  BRANCH="feat/api-retry-logic-$(date +%Y%m%d)"; TITLE="feat: implement retry logic with circuit breaker for external APIs"; LABEL="enhancement"
+            4)  BRANCH="feat/api-retry-logic-$(date +%Y%m%d%H%M%S)"; TITLE="feat: implement retry logic with circuit breaker for external APIs"; LABEL="enhancement"
                 SUMMARY="Implemented fetchWithRetry with exponential backoff and a CircuitBreaker class to protect against cascading failures when third-party APIs degrade."
                 CHANGES="fetchWithRetry supports configurable retries, timeout, and backoff. Handles 429 Retry-After headers automatically. CircuitBreaker supports CLOSED/OPEN/HALF_OPEN states with configurable threshold and recovery timeout. Added per-call stats tracking."
                 TESTING="Added 9 unit tests covering success path, retry on 500, max retry exhaustion, circuit breaker state transitions and stats. Simulated flaky endpoint at 30% failure rate, reduced effective failure rate to under 2%." ;;
-            5)  BRANCH="fix/input-validation-$(date +%Y%m%d)"; TITLE="fix: add comprehensive input validation and XSS protection layer"; LABEL="bug"
+            5)  BRANCH="fix/input-validation-$(date +%Y%m%d%H%M%S)"; TITLE="fix: add comprehensive input validation and XSS protection layer"; LABEL="bug"
                 SUMMARY="Replaced ad-hoc input checks with a centralized sanitization and validation module. Closes potential XSS and injection vulnerabilities identified in the security audit."
                 CHANGES="Added sanitizeString with configurable max length and XSS pattern stripping. validateEmail returns normalized lowercase email or structured error. validateUrl enforces https/http protocol. sanitizeInput handles email, name, bio, age and url fields with per-field error collection."
                 TESTING="Added 16 unit tests covering XSS payloads, edge cases, invalid formats and type coercion. Tested against OWASP XSS cheat sheet payloads. All existing endpoints validated with new layer, no false positives." ;;
-            6)  BRANCH="feat/cache-layer-$(date +%Y%m%d)"; TITLE="feat: add multi-level Redis caching with TTL and invalidation"; LABEL="enhancement"
+            6)  BRANCH="feat/cache-layer-$(date +%Y%m%d%H%M%S)"; TITLE="feat: add multi-level Redis caching with TTL and invalidation"; LABEL="enhancement"
                 SUMMARY="Implemented a two-level caching system with an in-process LRU cache backed by Redis, reducing external cache calls for hot data and improving p99 latency by ~40%."
                 CHANGES="CacheManager class handles local Map cache with TTL eviction backed by Redis. Local cache limited to 1000 entries with LRU-style eviction. Pattern-based cache invalidation clears both levels. Hit ratio tracking via getStats. withCache HOF wrapper for transparent function caching."
                 TESTING="Added 7 unit tests covering cache miss, redis hit, local hit (no redis call), TTL expiry and hit ratio calculation. Benchmarked 10k sequential reads: local cache path 0.02ms vs redis path 1.8ms." ;;
-            7)  BRANCH="chore/dependency-updates-$(date +%Y%m%d)"; TITLE="chore: update dependencies, patch CVEs and improve package config"; LABEL="dependencies"
+            7)  BRANCH="chore/dependency-updates-$(date +%Y%m%d%H%M%S)"; TITLE="chore: update dependencies, patch CVEs and improve package config"; LABEL="dependencies"
                 SUMMARY="Updated all production dependencies to latest stable versions, patching 3 CVEs flagged in npm audit. Removed unused dependencies reducing node_modules by ~15MB."
                 CHANGES="Patched jsonwebtoken CVE-2022-23529, express CVE-2024-29041 and axios CVE-2024-39338. Replaced moment.js with date-fns saving 67% in bundle size. Removed lodash in favour of native ES2022 alternatives. Added engines field to enforce Node 18+. Updated jest and eslint to latest major versions."
                 TESTING="Full test suite passes after all upgrades. No breaking API changes detected. npm audit returns 0 vulnerabilities. Bundle size reduced from 48MB to 41MB." ;;
-            8)  BRANCH="feat/rate-limiter-$(date +%Y%m%d)"; TITLE="feat: implement sliding window rate limiter with Redis sorted sets"; LABEL="enhancement"
+            8)  BRANCH="feat/rate-limiter-$(date +%Y%m%d%H%M%S)"; TITLE="feat: implement sliding window rate limiter with Redis sorted sets"; LABEL="enhancement"
                 SUMMARY="Replaced the simple fixed-window rate limiter with a sliding window implementation using Redis sorted sets, giving more accurate and fair rate limiting without burst exploitation."
                 CHANGES="Sliding window algorithm using ZADD/ZREMRANGEBYSCORE for accurate per-IP counting. Returns standard RateLimit headers including Reset and Retry-After. Fail-open design allows requests through on Redis errors. Exported preconfigured apiLimiter, authLimiter and uploadLimiter instances."
                 TESTING="Added 3 unit tests covering allow-under-limit, block-over-limit and fail-open behaviour. Manual tested burst of 200 req/s against 100 req/min limit, correctly blocked at threshold with accurate retry headers." ;;
-            9)  BRANCH="fix/memory-leak-$(date +%Y%m%d)"; TITLE="fix: resolve memory leak in WebSocket connection manager"; LABEL="bug"
+            9)  BRANCH="fix/memory-leak-$(date +%Y%m%d%H%M%S)"; TITLE="fix: resolve memory leak in WebSocket connection manager"; LABEL="bug"
                 SUMMARY="Fixed a memory leak in the WebSocket connection manager where event listeners were not being cleaned up on disconnect, causing heap growth of ~50MB/hour in production."
                 CHANGES="Stored listener references on connection object to enable precise removeListener calls instead of removeAllListeners. Added connection cap with early rejection to prevent unbounded growth. Implemented heartbeat-based stale connection pruning. Added broadcast with per-filter support and error isolation."
                 TESTING="Memory profiled over 24 hours in staging with 500 concurrent connections. Heap growth dropped from 50MB/hour to under 1MB/hour. Added 5 unit tests covering add, remove, duplicate replacement, broadcast and capacity limiting." ;;
-            10) BRANCH="feat/logger-service-$(date +%Y%m%d)"; TITLE="feat: implement production-grade structured logger with transports"; LABEL="enhancement"
+            10) BRANCH="feat/logger-service-$(date +%Y%m%d%H%M%S)"; TITLE="feat: implement production-grade structured logger with transports"; LABEL="enhancement"
                 SUMMARY="Replaced scattered console.log calls with a structured JSON logger supporting log levels, context inheritance, coloured console output in dev, and persistent file transports."
                 CHANGES="Logger class with error/warn/info/http/debug levels controlled via LOG_LEVEL env var. Coloured output in non-production environments. Writes to per-level log files and combined.log. child() method creates namespaced sub-loggers. time() helper for duration tracking."
                 TESTING="Added 5 unit tests covering JSON format validity, stderr routing for errors, stdout routing for info, child context naming, and timer accuracy. Verified log files created correctly in CI environment." ;;
-            11) BRANCH="fix/cors-config-$(date +%Y%m%d)"; TITLE="fix: tighten CORS policy and add security headers middleware"; LABEL="bug"
+            11) BRANCH="fix/cors-config-$(date +%Y%m%d%H%M%S)"; TITLE="fix: tighten CORS policy and add security headers middleware"; LABEL="bug"
                 SUMMARY="Tightened CORS configuration to enforce origin whitelist in production and added a security headers middleware covering HSTS, CSP, X-Frame-Options and other OWASP-recommended headers."
                 CHANGES="CORS origin function now reads ALLOWED_ORIGINS env var dynamically, allowing config changes without redeploy. Added securityHeaders middleware setting 8 security headers including a restrictive Content-Security-Policy. X-Request-ID propagation added for request tracing. X-Powered-By removed."
                 TESTING="Added 3 unit tests for security header presence, X-Request-ID propagation and next() call. Verified CORS blocks unlisted origins in production mode and allows all in development. Tested with OWASP ZAP scanner, 0 header-related findings." ;;
-            12) BRANCH="feat/pagination-$(date +%Y%m%d)"; TITLE="feat: implement cursor-based pagination with multi-field sort support"; LABEL="enhancement"
+            12) BRANCH="feat/pagination-$(date +%Y%m%d%H%M%S)"; TITLE="feat: implement cursor-based pagination with multi-field sort support"; LABEL="enhancement"
                 SUMMARY="Replaced offset-based pagination with cursor-based pagination across all list endpoints, eliminating O(n) database scans and fixing page drift on high-write collections."
                 CHANGES="paginate function supports configurable cursor field, sort direction and eager loading via include. paginateOffset kept for legacy endpoints requiring total count. parseCursorFromRequest normalises query params with validation. clampLimit enforces 1-100 range with sensible default."
                 TESTING="Added 8 unit tests covering cursor pagination, hasMore detection, offset pagination meta, limit clamping and edge cases. Benchmarked against 5M row dataset: offset pagination at page 100k took 4.2s, cursor pagination constant at 12ms." ;;
-            13) BRANCH="fix/error-boundary-$(date +%Y%m%d)"; TITLE="fix: add global error handler with AppError classification"; LABEL="bug"
+            13) BRANCH="fix/error-boundary-$(date +%Y%m%d%H%M%S)"; TITLE="fix: add global error handler with AppError classification"; LABEL="bug"
                 SUMMARY="Introduced a structured error hierarchy with AppError base class and specialised subclasses. Global error handler now distinguishes operational errors from programmer errors, preventing internal stack traces leaking in production."
                 CHANGES="AppError, ValidationError, NotFoundError and UnauthorizedError classes with statusCode and code properties. errorHandler middleware hides stack traces in production for non-operational errors. asyncHandler wrapper eliminates try/catch boilerplate in route handlers. notFoundHandler added for 404 routes."
                 TESTING="Added 10 unit tests covering all error classes, production vs development response formats, asyncHandler error forwarding and 404 handling. Verified no stack traces exposed in production mode via integration test." ;;
-            14) BRANCH="feat/health-check-$(date +%Y%m%d)"; TITLE="feat: add comprehensive health check with dependency monitoring"; LABEL="enhancement"
+            14) BRANCH="feat/health-check-$(date +%Y%m%d%H%M%S)"; TITLE="feat: add comprehensive health check with dependency monitoring"; LABEL="enhancement"
                 SUMMARY="Added /health, /ready and /live endpoints providing detailed dependency status for load balancer health checks and Kubernetes liveness/readiness probes."
                 CHANGES="health endpoint checks DB and Redis in parallel with latency tracking. Redis memory usage included in response. Memory heap monitoring with warning threshold at 90%. ready endpoint for K8s readiness probes. live endpoint for liveness probes. All responses include version, uptime and environment."
                 TESTING="Added 7 integration tests using supertest covering healthy/degraded states for DB down, Redis down, combined failures, and /ready and /live endpoints. Verified load balancer correctly routes traffic based on 200/503 status." ;;
