@@ -1850,7 +1850,6 @@ jobs:
           git commit -m "$MSG"
           git push origin $BRANCH
           echo "$BRANCH" > /tmp/current_branch.txt
-          echo "$TITLE_KEY=$BRANCH" >> $GITHUB_ENV
 
       - name: Create and merge PR
         env:
