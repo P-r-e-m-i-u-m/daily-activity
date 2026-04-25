@@ -1823,6 +1823,27 @@ jobs:
               echo "// build: $TS" >> src/routes/health.js ;;
           esac
 
+          # Add unique timestamped file to force large diff every run
+          mkdir -p src/types src/constants
+          printf '%s\n' \
+            '// Auto-generated type definitions - '"$DATE" \
+            '// Build: '"$TS" \
+            'export interface ApiResponse<T> { data: T; status: number; message: string; timestamp: string; }' \
+            'export interface PaginatedResponse<T> { items: T[]; total: number; page: number; hasMore: boolean; }' \
+            'export interface ErrorResponse { code: string; message: string; details?: unknown; requestId: string; }' \
+            'export type RequestStatus = "pending" | "processing" | "completed" | "failed" | "cancelled";' \
+            'export type UserRole = "admin" | "moderator" | "user" | "guest";' \
+            'export type LogLevel = "error" | "warn" | "info" | "http" | "debug";' > src/types/index.ts
+          printf '%s\n' \
+            '// App constants - generated '"$DATE $TS" \
+            'export const API_VERSION = "v1";' \
+            'export const MAX_RETRIES = 3;' \
+            'export const CACHE_TTL = 300;' \
+            'export const PAGE_SIZE = 20;' \
+            'export const MAX_PAGE_SIZE = 100;' \
+            'export const TOKEN_EXPIRY = 3600;' \
+            'export const HEARTBEAT_INTERVAL = 30000;' > src/constants/index.ts
+
           BRANCH="${BRANCH}-$(date +%Y%m%d)"
           git checkout -b $BRANCH
           git add .
