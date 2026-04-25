@@ -1,5 +1,5 @@
 // Auto-generated type definitions - 2026-04-25
-// Build: 1777138384
+// Build: 1777141159
 export interface ApiResponse<T> { data: T; status: number; message: string; timestamp: string; }
 export interface PaginatedResponse<T> { items: T[]; total: number; page: number; hasMore: boolean; }
 export interface ErrorResponse { code: string; message: string; details?: unknown; requestId: string; }
