@@ -1,64 +1,96 @@
+/**
+ * @file fetchWithRetry.js
+ * @description Fetch wrapper with exponential backoff and circuit breaker
+ * @updated 2026-04-25
+ */
 const logger = require("../services/logger");
 
 const DEFAULT_RETRIES = 3;
-const DEFAULT_TIMEOUT = 5000;
+const DEFAULT_TIMEOUT_MS = 8000;
+const DEFAULT_BACKOFF_MS = 1000;
 
-/**
- * Fetch with exponential backoff retry
- * Reduces API failure rate by ~80%
- */
-const fetchWithRetry = async (url, options = {}, retries = DEFAULT_RETRIES) => {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
-  for (let i = 0; i <= retries; i++) {
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const fetchWithRetry = async (url, options = {}, config = {}) => {
+  const { retries = DEFAULT_RETRIES, timeoutMs = DEFAULT_TIMEOUT_MS, backoffMs = DEFAULT_BACKOFF_MS } = config;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const response = await fetch(url, { ...options, signal: controller.signal });
-      clearTimeout(timeout);
-      if (!response.ok) throw new Error("HTTP " + response.status);
-      logger.info("API call succeeded", { url, attempt: i + 1 });
-      return response;
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timer);
+      if (res.status >= 500) throw new Error("Server error: " + res.status);
+      if (res.status === 429) {
+        const retryAfter = parseInt(res.headers.get("Retry-After") || "5") * 1000;
+        logger.warn("Rate limited, backing off", { url, retryAfter });
+        await sleep(retryAfter);
+        continue;
+      }
+      logger.info("API request succeeded", { url, status: res.status, attempt: attempt + 1 });
+      return res;
     } catch (err) {
-      if (i === retries) { clearTimeout(timeout); throw err; }
-      const delay = 1000 * Math.pow(2, i);
-      logger.warn("API call failed, retrying", { url, attempt: i + 1, delay });
-      await new Promise((r) => setTimeout(r, delay));
+      clearTimeout(timer);
+      if (attempt === retries) throw err;
+      const delay = backoffMs * Math.pow(2, attempt);
+      logger.warn("API request failed, retrying", { url, attempt: attempt + 1, delayMs: delay, error: err.message });
+      await sleep(delay);
     }
   }
 };
 
 class CircuitBreaker {
-  constructor(threshold = 5, timeout = 60000) {
-    this.threshold = threshold;
-    this.timeout = timeout;
+  constructor(options = {}) {
+    this.threshold = options.threshold || 5;
+    this.timeout = options.timeout || 60000;
+    this.halfOpenRequests = options.halfOpenRequests || 1;
     this.failures = 0;
+    this.successes = 0;
     this.state = "CLOSED";
     this.nextAttempt = Date.now();
+    this.stats = { totalCalls: 0, totalFailures: 0, totalSuccesses: 0 };
   }
 
+  get isOpen() { return this.state === "OPEN" && Date.now() < this.nextAttempt; }
+
   async call(fn) {
-    if (this.state === "OPEN") {
-      if (Date.now() < this.nextAttempt) throw new Error("Circuit breaker OPEN");
-      this.state = "HALF_OPEN";
-    }
+    this.stats.totalCalls++;
+    if (this.isOpen) throw new Error("Circuit breaker is OPEN - service unavailable");
+    if (this.state === "OPEN") this.state = "HALF_OPEN";
     try {
       const result = await fn();
-      this.reset();
+      this._onSuccess();
       return result;
     } catch (err) {
-      this.recordFailure();
+      this._onFailure();
       throw err;
     }
   }
 
-  reset() { this.failures = 0; this.state = "CLOSED"; }
+  _onSuccess() {
+    this.stats.totalSuccesses++;
+    this.failures = 0;
+    if (this.state === "HALF_OPEN") {
+      this.successes++;
+      if (this.successes >= this.halfOpenRequests) {
+        this.state = "CLOSED";
+        this.successes = 0;
+        logger.info("Circuit breaker closed");
+      }
+    }
+  }
 
-  recordFailure() {
+  _onFailure() {
+    this.stats.totalFailures++;
     this.failures++;
     if (this.failures >= this.threshold) {
       this.state = "OPEN";
       this.nextAttempt = Date.now() + this.timeout;
+      logger.error("Circuit breaker opened", new Error("Threshold reached: " + this.failures + " failures"));
     }
   }
+
+  getState() { return { state: this.state, failures: this.failures, ...this.stats }; }
 }
 
-module.exports = { fetchWithRetry, CircuitBreaker };
+module.exports = { fetchWithRetry, CircuitBreaker, sleep };
+// build: 1777137861
