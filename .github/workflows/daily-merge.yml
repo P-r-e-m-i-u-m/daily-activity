@@ -1844,19 +1844,22 @@ jobs:
             'export const TOKEN_EXPIRY = 3600;' \
             'export const HEARTBEAT_INTERVAL = 30000;' > src/constants/index.ts
 
-          BRANCH="${BRANCH}-$(date +%Y%m%d%H%M%S%H%M%S)"
+          BRANCH="${BRANCH}-$(date +%Y%m%d%H%M%S)"
           git checkout -b $BRANCH
           git add .
           git commit -m "$MSG"
           git push origin $BRANCH
+          echo "$BRANCH" > /tmp/current_branch.txt
+          echo "$TITLE_KEY=$BRANCH" >> $GITHUB_ENV
 
       - name: Create and merge PR
         env:
           GH_TOKEN: ${{ secrets.MY_TOKEN }}
         run: |
+          BRANCH=$(cat /tmp/current_branch.txt)
           DAY=$(( ($(date +%j) % 14) + 1 ))
           DATE=$(date +%Y-%m-%d)
-
+          
           case $DAY in
             1)  BRANCH="fix/auth-middleware-$(date +%Y%m%d%H%M%S)"; TITLE="fix: refactor JWT auth middleware with Redis caching"; LABEL="bug"
                 SUMMARY="Refactored the JWT authentication middleware to use Redis as a token cache layer, reducing repeated DB lookups by approximately 60% on authenticated endpoints."
