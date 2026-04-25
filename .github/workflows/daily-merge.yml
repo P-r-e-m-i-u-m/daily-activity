@@ -1845,6 +1845,7 @@ jobs:
             'export const HEARTBEAT_INTERVAL = 30000;' > src/constants/index.ts
 
           BRANCH="${BRANCH}-$(date +%Y%m%d%H%M%S)"
+          git push origin --delete $BRANCH 2>/dev/null || true
           git checkout -b $BRANCH
           git add .
           git commit -m "$MSG"
