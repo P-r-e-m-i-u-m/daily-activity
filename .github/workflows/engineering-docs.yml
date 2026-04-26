@@ -114,6 +114,7 @@ jobs:
                 "- [Implementation PR](https://github.com/P-r-e-m-i-u-m/daily-activity/pulls)" \
                 "- [Related Issues](https://github.com/P-r-e-m-i-u-m/daily-activity/issues)" > docs/adr/ADR-${ADR_NUM}-$(date +%Y%m%d).md
 
+              echo "<!-- generated: $TS -->" >> docs/adr/ADR-${ADR_NUM}-$(date +%Y%m%d).md
               git add docs/adr/
               git commit -m "docs: add ADR-${ADR_NUM} architectural decision record - $DATE" ;;
 
@@ -241,6 +242,7 @@ jobs:
                 '---' \
                 '*This incident report was reviewed and approved by the engineering team.*' > docs/incidents/INC-${INC_NUM}-$(date +%Y%m%d).md
 
+              echo "<!-- generated: $TS -->" >> docs/incidents/INC-${INC_NUM}-$(date +%Y%m%d).md  
               git add docs/incidents/
               git commit -m "docs: add incident report INC-${INC_NUM} post-mortem - $DATE" ;;
 
@@ -326,6 +328,7 @@ jobs:
                 '---' \
                 '*This RFC is open for comments. Please add feedback via GitHub Issues.*' > docs/rfc/RFC-${RFC_NUM}-$(date +%Y%m%d).md
 
+              echo "<!-- generated: $TS -->" >> docs/rfc/RFC-${RFC_NUM}-$(date +%Y%m%d).md  
               git add docs/rfc/
               git commit -m "docs: add RFC-${RFC_NUM} engineering proposal - $DATE" ;;
 
@@ -424,6 +427,7 @@ jobs:
                 "**Last dependency audit:** $DATE" \
                 '**Total vulnerabilities:** 0' > docs/architecture/dependency-graph-$(date +%Y%m%d).md
 
+              echo "<!-- generated: $TS -->" >> docs/architecture/dependency-graph-$(date +%Y%m%d).md  
               git add docs/architecture/
               git commit -m "docs: update module dependency graph - $DATE" ;;
 
@@ -520,6 +524,7 @@ jobs:
                 '---' \
                 '*This report is generated as part of the weekly security review process.*' > docs/security/security-audit-$(date +%Y%m%d).md
 
+              echo "<!-- generated: $TS -->" >> docs/security/security-audit-$(date +%Y%m%d).md  
               git add docs/security/
               git commit -m "docs: add weekly security audit report SEC-${AUDIT_NUM} - $DATE" ;;
           esac
