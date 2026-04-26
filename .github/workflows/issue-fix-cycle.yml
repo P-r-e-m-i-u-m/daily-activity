@@ -384,8 +384,9 @@ jobs:
           git checkout -b $FIX_BRANCH
           mkdir -p $(dirname $FIX_FILE)
           cp /tmp/fix_code.js $FIX_FILE
+          echo "// build: $TS" >> $FIX_FILE
           git add .
-          git commit -m "$FIX_MSG (closes #$ISSUE_NUM)"
+          git diff --staged --quiet || git commit -m "$FIX_MSG (closes #$ISSUE_NUM)"
           git push origin $FIX_BRANCH
 
           printf '%s\n' \
