@@ -89,4 +89,3 @@ jobs:
 
           echo "Project board setup complete!"
           echo "Visit: $PROJECT_URL"
-          2>/dev/null || true
