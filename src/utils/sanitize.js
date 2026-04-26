@@ -64,4 +64,4 @@ const validateRequired = (obj, fields) => {
 };
 
 module.exports = { sanitizeString, validateEmail, validateUrl, sanitizeInput, validateRequired };
-// build: 1777178622
+// build: 1777200214
