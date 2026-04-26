@@ -149,6 +149,9 @@ jobs:
             '---' \
             "*Full changelog: https://github.com/P-r-e-m-i-u-m/daily-activity/blob/main/CHANGELOG.md*" > /tmp/release_notes.md
 
+          # Add timestamp to make version unique
+          VERSION="${VERSION}-$(date +%Y%m%d)"
+
           git tag -a "$VERSION" -m "Release $VERSION — $RELEASE_TITLE"
           git push origin "$VERSION"
 
